@@ -164,17 +164,17 @@ struct SessionsView: View {
 
             Spacer(minLength: 8)
 
-            VStack(alignment: .trailing, spacing: 6) {
-                Text(CurrencyFormatting.signedString(from: session.profit))
-                    .font(.system(size: 17, weight: .bold, design: .rounded))
-                    .foregroundStyle(session.profit >= 0 ? MaxwinTheme.winGreen : MaxwinTheme.lossRed)
-
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(MaxwinTheme.gold)
-            }
+            Text(CurrencyFormatting.signedString(from: session.profit))
+                .font(.system(size: 17, weight: .bold, design: .rounded))
+                .foregroundStyle(session.profit >= 0 ? MaxwinTheme.winGreen : MaxwinTheme.lossRed)
         }
         .padding(16)
+        .overlay(alignment: .bottomTrailing) {
+            Image(systemName: "chevron.right")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(MaxwinTheme.gold)
+                .padding(16)
+        }
         .background(MaxwinTheme.fieldFill, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: 16, style: .continuous)

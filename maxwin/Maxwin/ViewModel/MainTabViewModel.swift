@@ -35,7 +35,8 @@ final class MainTabViewModel {
         self.sessionsViewModel = SessionsViewModel(sessionService: sessionService)
         self.trackViewModel = TrackViewModel(
             earningsService: earningsService,
-            animationsEnabled: settingsService.settings.animationsEnabled
+            animationsEnabled: settingsService.settings.animationsEnabled,
+            showYAxisLabels: settingsService.settings.showYAxisLabels
         )
         self.settingsViewModel = SettingsViewModel(
             authService: authService,
@@ -45,5 +46,6 @@ final class MainTabViewModel {
 
     func syncAnimationPreference() {
         trackViewModel.animationsEnabled = settingsService.settings.animationsEnabled
+        trackViewModel.showYAxisLabels = settingsService.settings.showYAxisLabels
     }
 }

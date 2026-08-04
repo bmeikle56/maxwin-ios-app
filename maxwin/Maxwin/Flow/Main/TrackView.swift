@@ -19,9 +19,12 @@ struct TrackView: View {
                 VStack(alignment: .leading, spacing: 20) {
                     rangePicker
 
-                    summaryHeader
-
-                    chartCard
+                    if viewModel.isLoading {
+                        loadingContent
+                    } else {
+                        summaryHeader
+                        chartCard
+                    }
 
                     Spacer(minLength: 0)
                 }
@@ -80,20 +83,32 @@ struct TrackView: View {
                 .font(.system(size: 13, weight: .medium, design: .rounded))
                 .foregroundStyle(MaxwinTheme.cream)
 
-            HStack(alignment: .firstTextBaseline, spacing: 10) {
-                Text(CurrencyFormatting.signedString(from: viewModel.totalProfit))
-                    .font(.system(size: 34, weight: .bold, design: .serif))
-                    .foregroundStyle(
-                        viewModel.totalProfit >= 0
-                        ? MaxwinTheme.winGreen
-                        : MaxwinTheme.lossRed
-                    )
+            Text(CurrencyFormatting.signedString(from: viewModel.totalProfit))
+                .font(.system(size: 34, weight: .bold, design: .serif))
+                .foregroundStyle(
+                    viewModel.totalProfit >= 0
+                    ? MaxwinTheme.winGreen
+                    : MaxwinTheme.lossRed
+                )
+        }
+    }
 
-                if viewModel.isLoading {
-                    ProgressView()
-                        .tint(MaxwinTheme.gold)
-                }
-            }
+    private var loadingContent: some View {
+        VStack(spacing: 16) {
+            ProgressView()
+                .tint(MaxwinTheme.gold)
+                .scaleEffect(1.15)
+
+            Text("Loading winnings…")
+                .font(.system(size: 14, weight: .medium, design: .rounded))
+                .foregroundStyle(MaxwinTheme.mutedCream)
+        }
+        .frame(maxWidth: .infinity, minHeight: 320)
+        .padding(16)
+        .background(Color.black.opacity(0.28), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .strokeBorder(MaxwinTheme.fieldStroke, lineWidth: 1)
         }
     }
 
@@ -104,7 +119,7 @@ struct TrackView: View {
                     .font(.system(size: 14, weight: .medium, design: .rounded))
                     .foregroundStyle(MaxwinTheme.mutedCream)
                     .frame(maxWidth: .infinity, minHeight: 220)
-            } else if viewModel.points.isEmpty && !viewModel.isLoading {
+            } else if viewModel.points.isEmpty {
                 Text("No sessions in this range yet.")
                     .font(.system(size: 14, weight: .medium, design: .rounded))
                     .foregroundStyle(MaxwinTheme.mutedCream)
@@ -112,12 +127,15 @@ struct TrackView: View {
             } else {
                 WinningsChartView(
                     points: viewModel.points,
-                    animationsEnabled: viewModel.animationsEnabled
+                    animationsEnabled: viewModel.animationsEnabled,
+                    showYAxisLabels: viewModel.showYAxisLabels
                 )
-                .frame(height: 240)
+                .frame(maxWidth: .infinity)
+                .frame(height: 260)
             }
         }
-        .padding(16)
+        .padding(12)
+        .frame(maxWidth: .infinity)
         .background(Color.black.opacity(0.28), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: 18, style: .continuous)

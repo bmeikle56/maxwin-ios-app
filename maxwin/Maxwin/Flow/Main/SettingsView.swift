@@ -106,6 +106,30 @@ struct SettingsView: View {
             .tint(MaxwinTheme.gold)
             .padding(.horizontal, 16)
             .padding(.vertical, 14)
+
+            Divider()
+                .background(MaxwinTheme.fieldStroke)
+                .padding(.leading, 52)
+
+            Toggle(isOn: Binding(
+                get: { viewModel.showYAxisLabels },
+                set: { newValue in
+                    viewModel.setShowYAxisLabels(newValue)
+                    onAnimationPreferenceChanged?()
+                }
+            )) {
+                Label {
+                    Text("Y-axis labels")
+                        .font(.system(size: 16, weight: .medium, design: .rounded))
+                        .foregroundStyle(MaxwinTheme.cream)
+                } icon: {
+                    Image(systemName: "arrow.up.and.down")
+                        .foregroundStyle(MaxwinTheme.gold)
+                }
+            }
+            .tint(MaxwinTheme.gold)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
         }
         .background(MaxwinTheme.fieldFill, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay {

@@ -23,10 +23,16 @@ final class TrackViewModel {
     }
 
     var animationsEnabled: Bool
+    var showYAxisLabels: Bool
 
-    init(earningsService: EarningsServicing, animationsEnabled: Bool = true) {
+    init(
+        earningsService: EarningsServicing,
+        animationsEnabled: Bool = true,
+        showYAxisLabels: Bool = true
+    ) {
         self.earningsService = earningsService
         self.animationsEnabled = animationsEnabled
+        self.showYAxisLabels = showYAxisLabels
     }
 
     func selectRange(_ range: DateRangeFilter) async {
@@ -37,6 +43,7 @@ final class TrackViewModel {
     func load() async {
         isLoading = true
         errorMessage = nil
+        points = []
         defer { isLoading = false }
 
         do {
