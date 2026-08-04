@@ -77,21 +77,8 @@ struct OnboardingView: View {
     }
 
     private var background: some View {
-        LinearGradient(
-            colors: [MaxwinTheme.felt, MaxwinTheme.feltDeep],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
-        .ignoresSafeArea()
-        .overlay {
-            RadialGradient(
-                colors: [MaxwinTheme.gold.opacity(0.12), .clear],
-                center: .top,
-                startRadius: 20,
-                endRadius: 420
-            )
+        MaxwinTheme.felt
             .ignoresSafeArea()
-        }
     }
 }
 

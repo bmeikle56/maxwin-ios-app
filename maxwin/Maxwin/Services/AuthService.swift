@@ -14,6 +14,7 @@ protocol AuthServicing: AnyObject {
 
     func signIn(with credentials: AuthCredentials) async throws -> User
     func signOut() async
+    func deleteAccount() async throws
     func requestPasswordReset(for username: String) async throws
 }
 
@@ -58,6 +59,12 @@ final class MockAuthService: AuthServicing {
 
     func signOut() async {
         try? await Task.sleep(nanoseconds: networkDelayNanoseconds / 2)
+        clearSession()
+    }
+
+    func deleteAccount() async throws {
+        try await Task.sleep(nanoseconds: networkDelayNanoseconds)
+        // Mock: wipe local session as if the account was removed.
         clearSession()
     }
 

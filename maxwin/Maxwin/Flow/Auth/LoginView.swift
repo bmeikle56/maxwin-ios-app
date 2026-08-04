@@ -54,15 +54,11 @@ struct LoginView: View {
     }
 
     private var background: some View {
-        LinearGradient(
-            colors: [MaxwinTheme.felt, MaxwinTheme.feltDeep],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
-        .ignoresSafeArea()
-        .onTapGesture {
-            focusedField = nil
-        }
+        MaxwinTheme.felt
+            .ignoresSafeArea()
+            .onTapGesture {
+                focusedField = nil
+            }
     }
 
     private var header: some View {

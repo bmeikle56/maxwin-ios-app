@@ -15,7 +15,7 @@ struct RootView: View {
             if !viewModel.onboardingService.hasCompletedOnboarding {
                 OnboardingView(viewModel: viewModel.onboardingViewModel)
             } else if viewModel.authService.isAuthenticated {
-                HomeView(viewModel: viewModel.homeViewModel)
+                MainTabView(viewModel: viewModel.mainTabViewModel)
             } else {
                 LoginView(viewModel: viewModel.loginViewModel)
             }
