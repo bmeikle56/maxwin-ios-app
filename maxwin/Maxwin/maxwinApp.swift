@@ -9,9 +9,15 @@ import SwiftUI
 
 @main
 struct MaxwinApp: App {
+    @State private var rootViewModel = RootViewModel(
+        authService: MockAuthService(),
+        onboardingService: MockOnboardingService()
+    )
+
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            RootView(viewModel: rootViewModel)
+                .preferredColorScheme(.dark)
         }
     }
 }
