@@ -12,8 +12,6 @@ import Observation
 @MainActor
 final class SessionsViewModel {
     var sessions: [PokerSession] = []
-    var expandedSessionIDs: Set<UUID> = []
-    var expandedHandIDs: Set<UUID> = []
     var isLoading = false
     var isMutating = false
     var errorMessage: String?
@@ -80,41 +78,8 @@ final class SessionsViewModel {
         do {
             try await sessionService.deleteSession(id: session.id)
             sessions.removeAll { $0.id == session.id }
-            expandedSessionIDs.remove(session.id)
-            for hand in session.hands {
-                expandedHandIDs.remove(hand.id)
-            }
         } catch {
             errorMessage = "Couldn't delete session. Try again."
         }
-    }
-
-    func toggleSessionExpanded(_ sessionID: UUID) {
-        if expandedSessionIDs.contains(sessionID) {
-            expandedSessionIDs.remove(sessionID)
-        } else {
-            expandedSessionIDs.insert(sessionID)
-        }
-    }
-
-    func isSessionExpanded(_ sessionID: UUID) -> Bool {
-        expandedSessionIDs.contains(sessionID)
-    }
-
-    func toggleHandExpanded(_ handID: UUID) {
-        if expandedHandIDs.contains(handID) {
-            expandedHandIDs.remove(handID)
-        } else {
-            expandedHandIDs.insert(handID)
-        }
-    }
-
-    func isHandExpanded(_ handID: UUID) -> Bool {
-        expandedHandIDs.contains(handID)
-    }
-
-    /// Hand detail is optional at the model/service layer; only present when non-nil.
-    func detail(for hand: Hand) -> HandDetail? {
-        hand.detail
     }
 }

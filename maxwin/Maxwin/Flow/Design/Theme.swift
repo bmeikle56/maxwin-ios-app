@@ -9,7 +9,7 @@ import SwiftUI
 
 enum MaxwinTheme {
     static let felt = Color(red: 0.03, green: 0.07, blue: 0.045)
-    static let feltDeep = Color(red: 0.5, green: 0.15, blue: 0.5)
+    static let feltDeep = Color(red: 0.02, green: 0.045, blue: 0.03)
     static let gold = Color(red: 0.82, green: 0.69, blue: 0.29)
     static let cream = Color(red: 0.96, green: 0.94, blue: 0.88)
     static let mutedCream = Color(red: 0.96, green: 0.94, blue: 0.88).opacity(0.72)
