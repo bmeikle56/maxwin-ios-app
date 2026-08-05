@@ -24,7 +24,7 @@ final class MockEarningsService: EarningsServicing {
     func fetchEarnings(for range: DateRangeFilter) async throws -> [EarningsDataPoint] {
         try await Task.sleep(nanoseconds: networkDelayNanoseconds)
 
-        let sessions = try await sessionService.fetchSessions()
+        let sessions = try await sessionService.fetchAllSessions()
             .sorted { $0.date < $1.date }
 
         let start = range.startDate()

@@ -31,8 +31,6 @@ struct SessionsView: View {
                         .padding()
                 } else if viewModel.sessions.isEmpty {
                     emptyState
-                } else if viewModel.filteredSessions.isEmpty {
-                    filteredEmptyState
                 } else {
                     sessionsList
                 }
@@ -42,7 +40,7 @@ struct SessionsView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button {
-                        viewModel.showFavoritesOnly.toggle()
+                        viewModel.setShowFavoritesOnly(!viewModel.showFavoritesOnly)
                     } label: {
                         Image(systemName: viewModel.showFavoritesOnly ? "star.fill" : "star")
                             .font(.system(size: 16, weight: .semibold))
@@ -91,9 +89,15 @@ struct SessionsView: View {
             }
             .fullScreenCover(isPresented: $viewModel.isLiveSessionPresented) {
                 if let liveSessionViewModel = viewModel.liveSessionViewModel {
-                    LiveSessionView(viewModel: liveSessionViewModel) {
-                        viewModel.discardLiveSession()
-                    }
+                    LiveSessionView(
+                        viewModel: liveSessionViewModel,
+                        onSave: {
+                            await viewModel.saveLiveSession()
+                        },
+                        onDiscard: {
+                            viewModel.discardLiveSession()
+                        }
+                    )
                 }
             }
             .confirmationDialog(
@@ -120,42 +124,16 @@ struct SessionsView: View {
 
     private var emptyState: some View {
         VStack(spacing: 12) {
-            Image(systemName: "suit.spade.fill")
+            Image(systemName: viewModel.showFavoritesOnly ? "star" : "suit.spade.fill")
                 .font(.system(size: 36, weight: .semibold))
                 .foregroundStyle(MaxwinTheme.gold)
-            Text("No sessions yet")
-                .font(.system(size: 20, weight: .bold, design: .serif))
-                .foregroundStyle(MaxwinTheme.cream)
-            Text("Log your first cash game or tournament.")
-                .font(.system(size: 14, weight: .medium, design: .rounded))
-                .foregroundStyle(MaxwinTheme.mutedCream)
-            Button {
-                viewModel.beginCreateSession()
-            } label: {
-                Text("Add Session")
-                    .font(.system(size: 16, weight: .semibold, design: .rounded))
-                    .foregroundStyle(MaxwinTheme.feltDeep)
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 12)
-                    .background(MaxwinTheme.gold, in: Capsule())
-            }
-            .padding(.top, 4)
-        }
-        .padding()
-    }
-
-    private var filteredEmptyState: some View {
-        VStack(spacing: 12) {
-            Image(systemName: viewModel.showFavoritesOnly ? "star" : "magnifyingglass")
-                .font(.system(size: 36, weight: .semibold))
-                .foregroundStyle(MaxwinTheme.gold)
-            Text(viewModel.showFavoritesOnly ? "No favorites yet" : "No matching sessions")
+            Text(viewModel.showFavoritesOnly ? "No favorites yet" : "No sessions yet")
                 .font(.system(size: 20, weight: .bold, design: .serif))
                 .foregroundStyle(MaxwinTheme.cream)
             Text(
                 viewModel.showFavoritesOnly
                 ? "Star a session to pin it here."
-                : "Try a different venue, stakes, or hole cards."
+                : "Log your first cash game or tournament."
             )
             .font(.system(size: 14, weight: .medium, design: .rounded))
             .foregroundStyle(MaxwinTheme.mutedCream)
@@ -163,9 +141,21 @@ struct SessionsView: View {
 
             if viewModel.showFavoritesOnly {
                 Button {
-                    viewModel.showFavoritesOnly = false
+                    viewModel.setShowFavoritesOnly(false)
                 } label: {
                     Text("Show all sessions")
+                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                        .foregroundStyle(MaxwinTheme.feltDeep)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 12)
+                        .background(MaxwinTheme.gold, in: Capsule())
+                }
+                .padding(.top, 4)
+            } else {
+                Button {
+                    viewModel.beginCreateSession()
+                } label: {
+                    Text("Add Session")
                         .font(.system(size: 16, weight: .semibold, design: .rounded))
                         .foregroundStyle(MaxwinTheme.feltDeep)
                         .padding(.horizontal, 20)
@@ -188,11 +178,23 @@ struct SessionsView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
 
-                ForEach(viewModel.filteredSessions) { session in
+                ForEach(viewModel.sessions) { session in
                     NavigationLink(value: session.id) {
                         sessionCard(session)
                     }
                     .buttonStyle(.plain)
+                    .onAppear {
+                        Task {
+                            await viewModel.loadMoreIfNeeded(currentSessionID: session.id)
+                        }
+                    }
+                }
+
+                if viewModel.isLoadingMore {
+                    ProgressView()
+                        .tint(MaxwinTheme.gold)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
                 }
             }
             .padding(.horizontal, 16)
@@ -201,7 +203,9 @@ struct SessionsView: View {
     }
 
     private func sessionCard(_ session: PokerSession) -> some View {
-        HStack(alignment: .top, spacing: 12) {
+        // let glow = session.profit >= 0 ? MaxwinTheme.winGreen : MaxwinTheme.lossRed
+
+        return HStack(alignment: .top, spacing: 12) {
             VStack(alignment: .leading, spacing: 6) {
                 Text(session.venue)
                     .font(.system(size: 17, weight: .semibold, design: .rounded))
@@ -218,9 +222,7 @@ struct SessionsView: View {
 
             Spacer(minLength: 8)
 
-            Text(CurrencyFormatting.signedString(from: session.profit))
-                .font(.system(size: 17, weight: .bold, design: .rounded))
-                .foregroundStyle(session.profit >= 0 ? MaxwinTheme.winGreen : MaxwinTheme.lossRed)
+            SessionProfitText(profit: session.profit)
         }
         .padding(16)
         .background(MaxwinTheme.fieldFill, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
@@ -231,6 +233,14 @@ struct SessionsView: View {
                     lineWidth: 1
                 )
         }
+        // Glow temporarily disabled.
+        // .background {
+        //     RoundedRectangle(cornerRadius: 16, style: .continuous)
+        //         .fill(glow.opacity(0.14))
+        //         .blur(radius: 5)
+        //         .padding(1)
+        // }
+        // .shadow(color: glow.opacity(0.16), radius: 4, x: 0, y: 0)
     }
 }
 
