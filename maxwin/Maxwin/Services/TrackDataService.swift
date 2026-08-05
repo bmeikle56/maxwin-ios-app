@@ -71,7 +71,7 @@ final class MockTrackDataService: TrackDataServicing {
             defer { self.isLoading = false }
 
             do {
-                let sessions = try await self.sessionService.fetchSessions()
+                let sessions = try await self.sessionService.fetchAllSessions()
                 self.rebuild(from: sessions)
                 self.isReady = true
             } catch {

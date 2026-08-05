@@ -11,7 +11,13 @@ import Observation
 @Observable
 @MainActor
 final class LiveSessionViewModel {
-    private var runningStartedAt: Date
+    /// False until the user confirms game type / environment and taps Start.
+    private(set) var hasStarted = false
+
+    var gameType: GameType?
+    var playEnvironment: PlayEnvironment?
+
+    private var runningStartedAt: Date?
     /// Elapsed time accumulated across completed run segments (excludes current run).
     private var accumulatedElapsed: TimeInterval = 0
     private(set) var isPaused = false
@@ -35,19 +41,16 @@ final class LiveSessionViewModel {
     var isSaving = false
     var errorMessage: String?
 
-    init(startedAt: Date = .now) {
-        self.runningStartedAt = startedAt
-    }
-
     var hasProgress: Bool {
-        handsPlayed > 0
-            || !loggedHands.isEmpty
-            || hasCurrentHandInput
-            || smallBlind != nil
-            || bigBlind != nil
-            || bbWon != 0
-            || accumulatedElapsed > 0
-            || !isPaused && Date.now.timeIntervalSince(runningStartedAt) > 0
+        hasStarted
+            && (handsPlayed > 0
+                || !loggedHands.isEmpty
+                || hasCurrentHandInput
+                || smallBlind != nil
+                || bigBlind != nil
+                || bbWon != 0
+                || accumulatedElapsed > 0
+                || (!isPaused && runningStartedAt.map { Date.now.timeIntervalSince($0) > 0 } == true))
     }
 
     /// Signed BB total for the session, e.g. `+20BB` or `-4.5BB`.
@@ -77,11 +80,24 @@ final class LiveSessionViewModel {
             .joined(separator: " ")
     }
 
+    var canStart: Bool {
+        !hasStarted && gameType != nil && playEnvironment != nil
+    }
+
     var canSave: Bool {
-        guard isPaused else { return false }
+        guard hasStarted, isPaused else { return false }
         guard let smallBlind, smallBlind > 0,
               let bigBlind, bigBlind > 0 else { return false }
         return true
+    }
+
+    /// Leaves the setup screen and begins the live timer.
+    func start() {
+        guard canStart else { return }
+        hasStarted = true
+        runningStartedAt = .now
+        isPaused = false
+        accumulatedElapsed = 0
     }
 
     func togglePause() {
@@ -93,21 +109,24 @@ final class LiveSessionViewModel {
     }
 
     func pause() {
-        guard !isPaused else { return }
+        guard hasStarted, !isPaused, let runningStartedAt else { return }
         accumulatedElapsed += Date.now.timeIntervalSince(runningStartedAt)
         isPaused = true
+        self.runningStartedAt = nil
     }
 
     func resume() {
-        guard isPaused else { return }
+        guard hasStarted, isPaused else { return }
         runningStartedAt = .now
         isPaused = false
     }
 
     func elapsed(at date: Date = .now) -> TimeInterval {
+        guard hasStarted else { return 0 }
         if isPaused {
             return max(0, accumulatedElapsed)
         }
+        guard let runningStartedAt else { return max(0, accumulatedElapsed) }
         return max(0, accumulatedElapsed + date.timeIntervalSince(runningStartedAt))
     }
 
@@ -124,13 +143,14 @@ final class LiveSessionViewModel {
 
     /// Bumps hands played; saves current hand detail when present, then always clears the form.
     func incrementHandsPlayed() {
-        guard !isPaused else { return }
+        guard hasStarted, !isPaused else { return }
         commitHand()
     }
 
     /// Builds a `PokerSession` from the live recording. Commits any in-progress hand first.
     func makeSession() -> PokerSession? {
         errorMessage = nil
+        guard hasStarted else { return nil }
         pause()
         commitPendingHandIfNeeded()
 
@@ -140,14 +160,19 @@ final class LiveSessionViewModel {
             return nil
         }
 
+        guard let gameType, let playEnvironment else {
+            errorMessage = "Select a game type and venue."
+            return nil
+        }
+
         let profit = bbWon * bigBlind
         let durationMinutes = max(Int((elapsed() / 60.0).rounded()), handsPlayed > 0 ? 1 : 0)
 
         return PokerSession(
             id: UUID(),
             date: .now,
-            venue: "Live Session",
-            gameType: .cash,
+            venue: playEnvironment == .online ? "Online Session" : "Live Session",
+            gameType: gameType,
             stakes: StakesParsing.format(smallBlind: smallBlind, bigBlind: bigBlind),
             durationMinutes: durationMinutes,
             buyIn: 0,

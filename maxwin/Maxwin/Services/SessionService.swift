@@ -22,8 +22,33 @@ enum SessionServiceError: LocalizedError, Equatable {
     }
 }
 
+struct SessionListPage: Equatable, Sendable {
+    let sessions: [PokerSession]
+    let offset: Int
+    let limit: Int
+    let totalCount: Int
+
+    var hasMore: Bool {
+        offset + sessions.count < totalCount
+    }
+
+    var nextOffset: Int {
+        offset + sessions.count
+    }
+}
+
+struct SessionListQuery: Equatable, Sendable {
+    var offset: Int = 0
+    var limit: Int = 10
+    var favoritesOnly: Bool = false
+    var searchText: String = ""
+}
+
 protocol SessionServicing: AnyObject {
-    func fetchSessions() async throws -> [PokerSession]
+    /// Paginated newest-first listing for the Sessions tab.
+    func fetchSessionPage(_ query: SessionListQuery) async throws -> SessionListPage
+    /// Full history for Track / earnings aggregates.
+    func fetchAllSessions() async throws -> [PokerSession]
     func createSession(_ session: PokerSession) async throws -> PokerSession
     func updateSession(_ session: PokerSession) async throws -> PokerSession
     func deleteSession(id: UUID) async throws
@@ -39,7 +64,26 @@ final class MockSessionService: SessionServicing {
         self.sessions = sessions.sorted { $0.date > $1.date }
     }
 
-    func fetchSessions() async throws -> [PokerSession] {
+    func fetchSessionPage(_ query: SessionListQuery) async throws -> SessionListPage {
+        try await Task.sleep(nanoseconds: networkDelayNanoseconds)
+
+        let filtered = filteredSessions(
+            favoritesOnly: query.favoritesOnly,
+            searchText: query.searchText
+        )
+        let limit = max(query.limit, 1)
+        let offset = max(query.offset, 0)
+        let slice = Array(filtered.dropFirst(offset).prefix(limit))
+
+        return SessionListPage(
+            sessions: slice,
+            offset: offset,
+            limit: limit,
+            totalCount: filtered.count
+        )
+    }
+
+    func fetchAllSessions() async throws -> [PokerSession] {
         try await Task.sleep(nanoseconds: networkDelayNanoseconds)
         return sessions
     }
@@ -71,6 +115,26 @@ final class MockSessionService: SessionServicing {
         sessions.removeAll { $0.id == id }
     }
 
+    private func filteredSessions(favoritesOnly: Bool, searchText: String) -> [PokerSession] {
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        return sessions.filter { session in
+            if favoritesOnly && !session.isFavorite {
+                return false
+            }
+            guard !query.isEmpty else { return true }
+
+            let haystacks: [String] = [
+                session.venue,
+                session.stakes,
+                session.gameType.rawValue
+            ] + session.hands.flatMap { hand in
+                [hand.holeCards, hand.position, hand.notes ?? ""]
+            }
+
+            return haystacks.contains { $0.localizedCaseInsensitiveContains(query) }
+        }
+    }
+
     private func validate(_ session: PokerSession) throws {
         guard !session.venue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
               !session.stakes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
@@ -91,7 +155,7 @@ final class MockSessionService: SessionServicing {
 
         // Chronological arc (oldest → newest): early green → deep red → recovery → high green.
         // Cumulative roughly: +220 → +560 → +160 → −320 → −700 → −400 → +100 → +640 → +1440 → +2200
-        return [
+        let featured: [PokerSession] = [
             PokerSession(
                 id: UUID(),
                 date: date(daysAgo: 1),
@@ -344,7 +408,28 @@ final class MockSessionService: SessionServicing {
                 ]
             )
         ]
-        .sorted { $0.date > $1.date }
+
+        // Extra lightweight sessions so list pagination is easy to exercise in mocks.
+        let venues = ["Bellagio", "ARIA", "Commerce", "The Bike", "Hustler", "Venetian", "Local home game", "Online - Ignition"]
+        let stakes = ["1/2 NL", "1/3 NL", "2/5 NL", "5/10 NL", "25NL", "50NL"]
+        let extras: [PokerSession] = (0..<20).map { index in
+            let buyIn = Double([200, 300, 500, 800][index % 4])
+            let swing = Double([-180, -90, 40, 120, 260, -40][index % 6])
+            return PokerSession(
+                id: UUID(),
+                date: date(daysAgo: 140 + index * 3, hour: 18 + (index % 4)),
+                venue: venues[index % venues.count],
+                gameType: index % 5 == 0 ? .tournament : .cash,
+                stakes: index % 5 == 0 ? "$\(100 + index * 10) buy-in" : stakes[index % stakes.count],
+                durationMinutes: 90 + (index * 17) % 180,
+                buyIn: buyIn,
+                cashOut: buyIn + swing,
+                hands: [],
+                isFavorite: index % 7 == 0
+            )
+        }
+
+        return (featured + extras).sorted { $0.date > $1.date }
     }()
 
     /// Kept for previews / earnings seeding that still reference the old name.

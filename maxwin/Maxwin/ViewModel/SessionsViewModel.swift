@@ -15,11 +15,16 @@ final class SessionsViewModel {
     var searchText = ""
     var showFavoritesOnly = false
     var isLoading = false
+    var isLoadingMore = false
     var isMutating = false
     var errorMessage: String?
     var sessionPendingDelete: PokerSession?
     var editorViewModel: SessionEditorViewModel?
     var liveSessionViewModel: LiveSessionViewModel?
+
+    private(set) var hasMore = false
+    private var nextOffset = 0
+    private let pageSize = 10
 
     private let sessionService: SessionServicing
     private let trackDataService: TrackDataServicing
@@ -51,26 +56,23 @@ final class SessionsViewModel {
         }
     }
 
-    var filteredSessions: [PokerSession] {
-        sessions.filter { session in
-            if showFavoritesOnly && !session.isFavorite {
-                return false
-            }
-            return matchesSearch(session)
-        }
+    func load() async {
+        await reload(reset: true)
     }
 
-    func load() async {
-        guard !isLoading else { return }
-        isLoading = true
-        errorMessage = nil
-        defer { isLoading = false }
+    func loadMoreIfNeeded(currentSessionID: UUID) async {
+        guard hasMore, !isLoading, !isLoadingMore else { return }
+        guard sessions.last?.id == currentSessionID else { return }
+        await reload(reset: false)
+    }
 
-        do {
-            sessions = try await sessionService.fetchSessions()
-        } catch {
-            errorMessage = "Couldn't load sessions. Pull to try again."
-        }
+    func setShowFavoritesOnly(_ value: Bool) {
+        guard showFavoritesOnly != value else { return }
+        showFavoritesOnly = value
+        sessions = []
+        hasMore = false
+        nextOffset = 0
+        Task { await reload(reset: true) }
     }
 
     func beginCreateSession() {
@@ -103,7 +105,7 @@ final class SessionsViewModel {
         do {
             _ = try await sessionService.createSession(session)
             self.liveSessionViewModel = nil
-            await load()
+            await reload(reset: true)
             await refreshTrackCache()
         } catch let error as SessionServiceError {
             liveSessionViewModel.errorMessage = error.localizedDescription
@@ -121,7 +123,7 @@ final class SessionsViewModel {
 
     func handleEditorSaved() async {
         editorViewModel = nil
-        await load()
+        await reload(reset: true)
         await refreshTrackCache()
     }
 
@@ -150,6 +152,50 @@ final class SessionsViewModel {
         await persistSession(updated)
     }
 
+    private func reload(reset: Bool) async {
+        if reset {
+            guard !isLoading else { return }
+            isLoading = true
+            errorMessage = nil
+        } else {
+            guard !isLoadingMore, hasMore else { return }
+            isLoadingMore = true
+        }
+        defer {
+            if reset {
+                isLoading = false
+            } else {
+                isLoadingMore = false
+            }
+        }
+
+        let offset = reset ? 0 : nextOffset
+        let query = SessionListQuery(
+            offset: offset,
+            limit: pageSize,
+            favoritesOnly: showFavoritesOnly,
+            searchText: searchText
+        )
+
+        do {
+            let page = try await sessionService.fetchSessionPage(query)
+            if reset {
+                sessions = page.sessions
+            } else {
+                let existingIDs = Set(sessions.map(\.id))
+                sessions.append(contentsOf: page.sessions.filter { !existingIDs.contains($0.id) })
+            }
+            nextOffset = page.nextOffset
+            hasMore = page.hasMore
+        } catch {
+            if reset && sessions.isEmpty {
+                errorMessage = "Couldn't load sessions. Pull to try again."
+            } else {
+                errorMessage = "Couldn't load more sessions."
+            }
+        }
+    }
+
     private func persistSession(_ session: PokerSession) async {
         isMutating = true
         defer { isMutating = false }
@@ -157,7 +203,11 @@ final class SessionsViewModel {
         do {
             let saved = try await sessionService.updateSession(session)
             if let index = sessions.firstIndex(where: { $0.id == saved.id }) {
-                sessions[index] = saved
+                if showFavoritesOnly && !saved.isFavorite {
+                    sessions.remove(at: index)
+                } else {
+                    sessions[index] = saved
+                }
             }
         } catch {
             errorMessage = "Couldn't update favorite. Try again."
@@ -167,20 +217,5 @@ final class SessionsViewModel {
     private func refreshTrackCache() async {
         await trackDataService.refresh()
         onTrackDataChanged?()
-    }
-
-    private func matchesSearch(_ session: PokerSession) -> Bool {
-        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !query.isEmpty else { return true }
-
-        let haystacks: [String] = [
-            session.venue,
-            session.stakes,
-            session.gameType.rawValue
-        ] + session.hands.flatMap { hand in
-            [hand.holeCards, hand.position, hand.notes ?? ""]
-        }
-
-        return haystacks.contains { $0.localizedCaseInsensitiveContains(query) }
     }
 }

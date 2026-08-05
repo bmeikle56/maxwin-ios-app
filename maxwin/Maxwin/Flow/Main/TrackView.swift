@@ -132,7 +132,7 @@ struct TrackView: View {
                     .foregroundStyle(MaxwinTheme.headerGray)
 
                 Text(PokerSession.formatDuration(minutes: viewModel.totalMinutesPlayed))
-                    .font(.system(size: 34, weight: .bold, design: .serif))
+                    .font(.system(size: 13, weight: .medium, design: .rounded))
                     .foregroundStyle(MaxwinTheme.headerGray)
                     .multilineTextAlignment(.trailing)
             }
@@ -190,10 +190,7 @@ struct TrackView: View {
             HStack(alignment: .top, spacing: metricsGap) {
                 statTile(title: "BB/100", showsInfo: true) {
                     if let target = viewModel.averageBBPer100 {
-                        AnimatedBBPer100Text(
-                            value: target * metricsProgress,
-                            animationsEnabled: viewModel.animationsEnabled
-                        )
+                        AnimatedBBPer100Text(value: target * metricsProgress)
                             .id("bb-\(metricsGeneration)")
                     } else {
                         placeholderMetric
@@ -211,10 +208,7 @@ struct TrackView: View {
 
                 statTile(title: "Win rate") {
                     if let target = viewModel.sessionWinRate {
-                        AnimatedWinRateText(
-                            rate: target * metricsProgress,
-                            animationsEnabled: viewModel.animationsEnabled
-                        )
+                        AnimatedWinRateText(rate: target * metricsProgress)
                             .id("winrate-\(metricsGeneration)")
                     } else {
                         placeholderMetric
@@ -362,7 +356,6 @@ struct TrackView: View {
 
 private struct AnimatedBBPer100Text: View, Animatable {
     var value: Double
-    var animationsEnabled: Bool = true
 
     var animatableData: Double {
         get { value }
@@ -374,12 +367,10 @@ private struct AnimatedBBPer100Text: View, Animatable {
         MetricHeat.normalized(value, scale: 20)
     }
 
-    /// Ramps in above ~0.7 (~+17 bb/100), full as value → +∞.
     private var fireIntensity: Double {
         MetricHeat.fireIntensity(normalized: normalized)
     }
 
-    /// Ramps in below ~−0.7 (~−17 bb/100), full as value → −∞.
     private var iceIntensity: Double {
         MetricHeat.iceIntensity(normalized: normalized)
     }
@@ -391,20 +382,18 @@ private struct AnimatedBBPer100Text: View, Animatable {
             .minimumScaleFactor(0.8)
             .lineLimit(1)
             .background {
-                if animationsEnabled {
-                    GeometryReader { proxy in
-                        let width = max(proxy.size.width * 1.85, 72)
-                        let height = max(proxy.size.height * 2.4, 40)
-                        ZStack {
-                            if fireIntensity > 0.01 {
-                                MetricFireAura(intensity: fireIntensity, width: width, height: height)
-                            }
-                            if iceIntensity > 0.01 {
-                                MetricIceAura(intensity: iceIntensity, width: width, height: height)
-                            }
+                GeometryReader { proxy in
+                    let width = max(proxy.size.width * 1.85, 72)
+                    let height = max(proxy.size.height * 2.4, 40)
+                    ZStack {
+                        if fireIntensity > 0 {
+                            MetricFireAura(intensity: fireIntensity, width: width, height: height)
                         }
-                        .frame(width: proxy.size.width, height: proxy.size.height)
+                        if iceIntensity > 0 {
+                            MetricIceAura(intensity: iceIntensity, width: width, height: height)
+                        }
                     }
+                    .frame(width: proxy.size.width, height: proxy.size.height)
                 }
             }
     }
@@ -433,38 +422,35 @@ private struct AnimatedDurationText: View, Animatable {
 
 private struct AnimatedWinRateText: View, Animatable {
     var rate: Double
-    var animationsEnabled: Bool = true
 
     var animatableData: Double {
         get { rate }
         set { rate = newValue }
     }
 
-    /// Ramps in above ~85%, full at 100%.
+    /// Fire ramps from just above break-even (0.5) to full at 1.0.
     private var fireIntensity: Double {
-        max(0, min(1, (rate - 0.85) / 0.15))
+        max(0, min(1, (rate - 0.5) / 0.5))
     }
 
-    /// Ramps in below ~15%, full at 0%.
+    /// Ice ramps from just below break-even (0.5) to full at 0.0.
     private var iceIntensity: Double {
-        max(0, min(1, (0.15 - rate) / 0.15))
+        max(0, min(1, (0.5 - rate) / 0.5))
     }
 
     var body: some View {
-        Text("\(Int((rate * 100).rounded()))")
+        Text(String(format: "%.2f", rate))
             .font(.system(size: 18, weight: .bold, design: .rounded))
             .foregroundStyle(MetricHeat.rateHeatColor(rate))
             .minimumScaleFactor(0.8)
             .lineLimit(1)
             .background {
-                if animationsEnabled {
-                    ZStack {
-                        if fireIntensity > 0.01 {
-                            MetricFireAura(intensity: fireIntensity)
-                        }
-                        if iceIntensity > 0.01 {
-                            MetricIceAura(intensity: iceIntensity)
-                        }
+                ZStack {
+                    if fireIntensity > 0 {
+                        MetricFireAura(intensity: fireIntensity)
+                    }
+                    if iceIntensity > 0 {
+                        MetricIceAura(intensity: iceIntensity)
                     }
                 }
             }

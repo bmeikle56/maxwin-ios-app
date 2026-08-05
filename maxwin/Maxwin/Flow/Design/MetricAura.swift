@@ -14,14 +14,14 @@ enum MetricHeat {
         tanh(value / scale)
     }
 
-    /// Ramps in above ~0.7 normalized, full as value → +∞.
+    /// Ramps from just above zero toward full as value → +∞.
     static func fireIntensity(normalized: Double) -> Double {
-        max(0, min(1, (normalized - 0.7) / 0.3))
+        max(0, min(1, normalized))
     }
 
-    /// Ramps in below ~−0.7 normalized, full as value → −∞.
+    /// Ramps from just below zero toward full as value → −∞.
     static func iceIntensity(normalized: Double) -> Double {
-        max(0, min(1, (-0.7 - normalized) / 0.3))
+        max(0, min(1, -normalized))
     }
 
     /// −1 → light blue ice, 0 → white, +1 → bright orange-yellow fire (BB/100 style).
@@ -256,7 +256,7 @@ struct SessionProfitText: View {
     }
 
     var body: some View {
-        Text(CurrencyFormatting.signedString(from: profit))
+        Text(formatted)
             .font(.system(size: 17, weight: .bold, design: .rounded))
             .foregroundStyle(MetricHeat.signedHeatColor(normalized: normalized))
             .lineLimit(1)
@@ -267,10 +267,10 @@ struct SessionProfitText: View {
                         let width = max(proxy.size.width * 1.85, 72)
                         let height = max(proxy.size.height * 2.4, 40)
                         ZStack {
-                            if fireIntensity > 0.01 {
+                            if fireIntensity > 0 {
                                 MetricFireAura(intensity: fireIntensity, width: width, height: height)
                             }
-                            if iceIntensity > 0.01 {
+                            if iceIntensity > 0 {
                                 MetricIceAura(intensity: iceIntensity, width: width, height: height)
                             }
                         }
@@ -278,5 +278,11 @@ struct SessionProfitText: View {
                     }
                 }
             }
+    }
+
+    private var formatted: String {
+        if abs(profit) < 0.5 { return "0" }
+        let rounded = profit.rounded()
+        return String(format: "%.0f", rounded)
     }
 }

@@ -12,6 +12,11 @@ enum GameType: String, Codable, Sendable, CaseIterable {
     case tournament = "Tournament"
 }
 
+enum PlayEnvironment: String, Codable, Sendable, CaseIterable {
+    case online = "Online"
+    case live = "Live"
+}
+
 struct PokerSession: Identifiable, Equatable, Codable, Sendable {
     let id: UUID
     let date: Date
