@@ -20,6 +20,7 @@ enum DateRangeFilter: String, CaseIterable, Identifiable, Sendable {
     case allTime = "All time"
     case lastYear = "Last year"
     case lastMonth = "Last month"
+    case lastWeek = "Last week"
 
     var id: String { rawValue }
 
@@ -31,6 +32,8 @@ enum DateRangeFilter: String, CaseIterable, Identifiable, Sendable {
             return calendar.date(byAdding: .year, value: -1, to: now)
         case .lastMonth:
             return calendar.date(byAdding: .month, value: -1, to: now)
+        case .lastWeek:
+            return calendar.date(byAdding: .day, value: -7, to: now)
         }
     }
 }

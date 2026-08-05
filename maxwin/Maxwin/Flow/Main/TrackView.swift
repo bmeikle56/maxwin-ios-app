@@ -54,19 +54,22 @@ struct TrackView: View {
     }
 
     private var rangePicker: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 6) {
             ForEach(DateRangeFilter.allCases) { range in
                 Button {
                     Task { await viewModel.selectRange(range) }
                 } label: {
                     Text(range.rawValue)
-                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        .font(.system(size: 12, weight: .semibold, design: .rounded))
                         .foregroundStyle(
                             viewModel.selectedRange == range
                             ? MaxwinTheme.feltDeep
                             : MaxwinTheme.cream
                         )
-                        .padding(.horizontal, 14)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
+                        .frame(maxWidth: .infinity)
+                        .padding(.horizontal, 4)
                         .padding(.vertical, 10)
                         .background(
                             viewModel.selectedRange == range
@@ -91,18 +94,29 @@ struct TrackView: View {
     }
 
     private var summaryHeader: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Cumulative winnings")
-                .font(.system(size: 13, weight: .medium, design: .rounded))
-                .foregroundStyle(MaxwinTheme.cream)
+        HStack(alignment: .top, spacing: 12) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Cumulative winnings")
+                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                    .foregroundStyle(MaxwinTheme.headerGray)
 
-            Text(CurrencyFormatting.signedString(from: viewModel.totalProfit))
-                .font(.system(size: 34, weight: .bold, design: .serif))
-                .foregroundStyle(
-                    viewModel.totalProfit >= 0
-                    ? MaxwinTheme.winGreen
-                    : MaxwinTheme.lossRed
-                )
+                Text(CurrencyFormatting.signedString(from: viewModel.totalProfit))
+                    .font(.system(size: 34, weight: .bold, design: .serif))
+                    .foregroundStyle(MaxwinTheme.headerGray)
+            }
+
+            Spacer(minLength: 8)
+
+            VStack(alignment: .trailing, spacing: 6) {
+                Text("Hours played")
+                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                    .foregroundStyle(MaxwinTheme.headerGray)
+
+                Text(PokerSession.formatDuration(minutes: viewModel.totalMinutesPlayed))
+                    .font(.system(size: 34, weight: .bold, design: .serif))
+                    .foregroundStyle(MaxwinTheme.headerGray)
+                    .multilineTextAlignment(.trailing)
+            }
         }
     }
 

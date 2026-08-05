@@ -13,6 +13,8 @@ enum MaxwinTheme {
     static let gold = Color(red: 0.82, green: 0.69, blue: 0.29)
     static let cream = Color(red: 0.96, green: 0.94, blue: 0.88)
     static let mutedCream = Color(red: 0.96, green: 0.94, blue: 0.88).opacity(0.72)
+    /// Darker gray for Track summary titles and values.
+    static let headerGray = Color(white: 0.55)
     /// Opaque elevated surface so wallpaper does not show through cards.
     static let fieldFill = Color(red: 0.04, green: 0.08, blue: 0.055)
     /// Opaque darker panel used for charts and inset cards.
