@@ -16,49 +16,39 @@ struct LoginView: View {
     }
 
     var body: some View {
-        ZStack {
-            background
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                header
+                    .padding(.top, 56)
+                    .padding(.bottom, 40)
 
-            ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
-                    header
-                        .padding(.top, 56)
-                        .padding(.bottom, 40)
+                formFields
 
-                    formFields
+                forgotPasswordLink
+                    .padding(.top, 12)
 
-                    forgotPasswordLink
+                signInButton
+                    .padding(.top, 28)
+
+                if let errorMessage = viewModel.errorMessage {
+                    Text(errorMessage)
+                        .font(.system(size: 13, weight: .medium, design: .rounded))
+                        .foregroundStyle(Color(red: 1.0, green: 0.55, blue: 0.45))
                         .padding(.top, 12)
-
-                    signInButton
-                        .padding(.top, 28)
-
-                    if let errorMessage = viewModel.errorMessage {
-                        Text(errorMessage)
-                            .font(.system(size: 13, weight: .medium, design: .rounded))
-                            .foregroundStyle(Color(red: 1.0, green: 0.55, blue: 0.45))
-                            .padding(.top, 12)
-                            .transition(.opacity)
-                    }
+                        .transition(.opacity)
                 }
-                .padding(.horizontal, 28)
-                .padding(.bottom, 40)
             }
-            .scrollDismissesKeyboard(.interactively)
+            .padding(.horizontal, 28)
+            .padding(.bottom, 40)
         }
+        .scrollDismissesKeyboard(.interactively)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .feltScreenBackground()
         .alert("Forgot password", isPresented: $viewModel.showForgotPasswordAlert) {
             Button("OK", role: .cancel) {}
         } message: {
             Text(viewModel.forgotPasswordMessage)
         }
-    }
-
-    private var background: some View {
-        MaxwinTheme.felt
-            .ignoresSafeArea()
-            .onTapGesture {
-                focusedField = nil
-            }
     }
 
     private var header: some View {

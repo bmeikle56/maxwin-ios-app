@@ -26,10 +26,7 @@ struct SessionDetailView: View {
     }
 
     var body: some View {
-        ZStack {
-            MaxwinTheme.felt
-                .ignoresSafeArea()
-
+        Group {
             if let session {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 20) {
@@ -49,10 +46,10 @@ struct SessionDetailView: View {
                     .foregroundStyle(MaxwinTheme.mutedCream)
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .feltScreenBackground()
         .navigationTitle(session?.venue ?? "Session")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbarBackground(MaxwinTheme.feltDeep.opacity(0.9), for: .navigationBar)
-        .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbar {
             ToolbarItemGroup(placement: .topBarTrailing) {
                 if let session {
@@ -230,7 +227,7 @@ struct SessionDetailView: View {
                 }
                 .padding(12)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color.black.opacity(0.28), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .background(MaxwinTheme.panelFill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
             }
         }
         .padding(14)

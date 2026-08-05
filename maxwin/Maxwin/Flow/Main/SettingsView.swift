@@ -13,31 +13,26 @@ struct SettingsView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                MaxwinTheme.felt
-                    .ignoresSafeArea()
+            ScrollView {
+                VStack(spacing: 20) {
+                    profileHeader
 
-                ScrollView {
-                    VStack(spacing: 20) {
-                        profileHeader
+                    settingsSection
 
-                        settingsSection
+                    accountSection
 
-                        accountSection
-
-                        if let errorMessage = viewModel.errorMessage {
-                            Text(errorMessage)
-                                .font(.system(size: 13, weight: .medium, design: .rounded))
-                                .foregroundStyle(MaxwinTheme.lossRed)
-                        }
+                    if let errorMessage = viewModel.errorMessage {
+                        Text(errorMessage)
+                            .font(.system(size: 13, weight: .medium, design: .rounded))
+                            .foregroundStyle(MaxwinTheme.lossRed)
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
                 }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .feltScreenBackground()
             .navigationTitle("Settings")
-            .toolbarBackground(MaxwinTheme.feltDeep.opacity(0.9), for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
             .confirmationDialog(
                 "Delete account?",
                 isPresented: $viewModel.showDeleteConfirmation,

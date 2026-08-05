@@ -287,5 +287,5 @@ struct WinningsChartView: View {
     )
     .frame(height: 240)
     .padding(12)
-    .background(Color.black.opacity(0.28), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+    .background(MaxwinTheme.panelFill, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
 }

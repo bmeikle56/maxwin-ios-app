@@ -19,31 +19,27 @@ struct SessionsView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                background
-
-                Group {
-                    if viewModel.isLoading && viewModel.sessions.isEmpty {
-                        ProgressView()
-                            .tint(MaxwinTheme.gold)
-                    } else if let errorMessage = viewModel.errorMessage, viewModel.sessions.isEmpty {
-                        Text(errorMessage)
-                            .font(.system(size: 15, weight: .medium, design: .rounded))
-                            .foregroundStyle(MaxwinTheme.mutedCream)
-                            .multilineTextAlignment(.center)
-                            .padding()
-                    } else if viewModel.sessions.isEmpty {
-                        emptyState
-                    } else if viewModel.filteredSessions.isEmpty {
-                        filteredEmptyState
-                    } else {
-                        sessionsList
-                    }
+            Group {
+                if viewModel.isLoading && viewModel.sessions.isEmpty {
+                    ProgressView()
+                        .tint(MaxwinTheme.gold)
+                } else if let errorMessage = viewModel.errorMessage, viewModel.sessions.isEmpty {
+                    Text(errorMessage)
+                        .font(.system(size: 15, weight: .medium, design: .rounded))
+                        .foregroundStyle(MaxwinTheme.mutedCream)
+                        .multilineTextAlignment(.center)
+                        .padding()
+                } else if viewModel.sessions.isEmpty {
+                    emptyState
+                } else if viewModel.filteredSessions.isEmpty {
+                    filteredEmptyState
+                } else {
+                    sessionsList
                 }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .feltScreenBackground()
             .navigationTitle("Sessions")
-            .toolbarBackground(MaxwinTheme.feltDeep.opacity(0.9), for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
             .searchable(text: $viewModel.searchText, prompt: "Venue, stakes, cards…")
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
@@ -105,11 +101,6 @@ struct SessionsView: View {
                 }
             }
         }
-    }
-
-    private var background: some View {
-        MaxwinTheme.felt
-            .ignoresSafeArea()
     }
 
     private var emptyState: some View {
