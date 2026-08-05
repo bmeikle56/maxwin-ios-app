@@ -51,7 +51,16 @@ struct SessionsView: View {
                     .accessibilityLabel(viewModel.showFavoritesOnly ? "Show all sessions" : "Show favorites only")
                 }
 
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItemGroup(placement: .topBarTrailing) {
+                    Button {
+                        viewModel.beginLiveSession()
+                    } label: {
+                        Image(systemName: "play.fill")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(MaxwinTheme.cream)
+                    }
+                    .accessibilityLabel("Start live session")
+
                     Button {
                         viewModel.beginCreateSession()
                     } label: {
@@ -59,6 +68,7 @@ struct SessionsView: View {
                             .font(.system(size: 16, weight: .semibold))
                             .foregroundStyle(MaxwinTheme.cream)
                     }
+                    .accessibilityLabel("Add session")
                 }
             }
             .navigationDestination(for: UUID.self) { sessionID in
@@ -76,6 +86,13 @@ struct SessionsView: View {
                 if let editorViewModel = viewModel.editorViewModel {
                     SessionEditorView(viewModel: editorViewModel) {
                         await viewModel.handleEditorSaved()
+                    }
+                }
+            }
+            .fullScreenCover(isPresented: $viewModel.isLiveSessionPresented) {
+                if let liveSessionViewModel = viewModel.liveSessionViewModel {
+                    LiveSessionView(viewModel: liveSessionViewModel) {
+                        viewModel.discardLiveSession()
                     }
                 }
             }
@@ -206,12 +223,6 @@ struct SessionsView: View {
                 .foregroundStyle(session.profit >= 0 ? MaxwinTheme.winGreen : MaxwinTheme.lossRed)
         }
         .padding(16)
-        .overlay(alignment: .bottomTrailing) {
-            Image(systemName: "chevron.right")
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(MaxwinTheme.gold)
-                .padding(16)
-        }
         .background(MaxwinTheme.fieldFill, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: 16, style: .continuous)

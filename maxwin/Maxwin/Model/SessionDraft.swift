@@ -12,10 +12,11 @@ struct SessionDraft: Equatable {
     var date: Date
     var venue: String
     var gameType: GameType
-    var stakes: String
+    var smallBlind: Double?
+    var bigBlind: Double?
     var durationMinutes: Int
-    var buyIn: Double
-    var cashOut: Double
+    var buyIn: Double?
+    var cashOut: Double?
     var hands: [HandDraft]
     var isFavorite: Bool
 
@@ -27,10 +28,11 @@ struct SessionDraft: Equatable {
             date: date,
             venue: "",
             gameType: .cash,
-            stakes: "",
+            smallBlind: nil,
+            bigBlind: nil,
             durationMinutes: 120,
-            buyIn: 0,
-            cashOut: 0,
+            buyIn: nil,
+            cashOut: nil,
             hands: [],
             isFavorite: false
         )
@@ -41,7 +43,9 @@ struct SessionDraft: Equatable {
         date = session.date
         venue = session.venue
         gameType = session.gameType
-        stakes = session.stakes
+        let blinds = StakesParsing.smallAndBigBlind(from: session.stakes)
+        smallBlind = blinds?.small
+        bigBlind = blinds?.big
         durationMinutes = session.durationMinutes
         buyIn = session.buyIn
         cashOut = session.cashOut
@@ -54,10 +58,11 @@ struct SessionDraft: Equatable {
         date: Date,
         venue: String,
         gameType: GameType,
-        stakes: String,
+        smallBlind: Double?,
+        bigBlind: Double?,
         durationMinutes: Int,
-        buyIn: Double,
-        cashOut: Double,
+        buyIn: Double?,
+        cashOut: Double?,
         hands: [HandDraft],
         isFavorite: Bool = false
     ) {
@@ -65,7 +70,8 @@ struct SessionDraft: Equatable {
         self.date = date
         self.venue = venue
         self.gameType = gameType
-        self.stakes = stakes
+        self.smallBlind = smallBlind
+        self.bigBlind = bigBlind
         self.durationMinutes = durationMinutes
         self.buyIn = buyIn
         self.cashOut = cashOut
@@ -73,13 +79,13 @@ struct SessionDraft: Equatable {
         self.isFavorite = isFavorite
     }
 
-    func makeSession() -> PokerSession {
+    func makeSession(buyIn: Double, cashOut: Double, smallBlind: Double, bigBlind: Double) -> PokerSession {
         PokerSession(
             id: id ?? UUID(),
             date: date,
             venue: venue.trimmingCharacters(in: .whitespacesAndNewlines),
             gameType: gameType,
-            stakes: stakes.trimmingCharacters(in: .whitespacesAndNewlines),
+            stakes: StakesParsing.format(smallBlind: smallBlind, bigBlind: bigBlind),
             durationMinutes: max(durationMinutes, 0),
             buyIn: buyIn,
             cashOut: cashOut,
