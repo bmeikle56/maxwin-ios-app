@@ -187,7 +187,7 @@ struct TrackView: View {
         VStack(spacing: metricsGap) {
             chartCard
 
-            HStack(spacing: metricsGap) {
+            HStack(alignment: .top, spacing: metricsGap) {
                 statTile(title: "BB/100", showsInfo: true) {
                     if let target = viewModel.averageBBPer100 {
                         AnimatedBBPer100Text(
@@ -286,22 +286,18 @@ struct TrackView: View {
         showsInfo: Bool = false,
         @ViewBuilder value: () -> Content
     ) -> some View {
-        VStack(spacing: 6) {
-            ZStack {
-                Text(title)
-                    .font(.system(size: 12, weight: .medium, design: .rounded))
-                    .foregroundStyle(MaxwinTheme.mutedCream)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.85)
+        VStack(spacing: 10) {
+            HStack(spacing: 0) {
+                Spacer(minLength: 0)
 
-                if showsInfo {
-                    HStack(spacing: 3) {
-                        Text(title)
-                            .font(.system(size: 12, weight: .medium, design: .rounded))
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.85)
-                            .hidden()
+                HStack(spacing: 5) {
+                    Text(title)
+                        .font(.system(size: 12, weight: .medium, design: .rounded))
+                        .foregroundStyle(MaxwinTheme.mutedCream)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
 
+                    if showsInfo {
                         Button {
                             showingBBPer100Info = true
                         } label: {
@@ -313,10 +309,12 @@ struct TrackView: View {
                         .accessibilityLabel("What is BB/100?")
                     }
                 }
+
+                Spacer(minLength: 0)
             }
-            .frame(maxWidth: .infinity)
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
+            .frame(maxWidth: .infinity)
             .background(
                 Color(white: 0.42).opacity(0.35),
                 in: RoundedRectangle(cornerRadius: 6, style: .continuous)
@@ -325,7 +323,7 @@ struct TrackView: View {
             value()
                 .frame(maxWidth: .infinity)
         }
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, alignment: .top)
         .padding(.vertical, 16)
         .padding(.horizontal, 4)
         .background(MaxwinTheme.panelFill, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
@@ -476,22 +474,23 @@ private struct AnimatedWinRateText: View, Animatable {
     }
 
     var body: some View {
-        ZStack {
-            if animationsEnabled {
-                if fireIntensity > 0.01 {
-                    WinRateFireAura(intensity: fireIntensity)
-                }
-                if iceIntensity > 0.01 {
-                    WinRateIceAura(intensity: iceIntensity)
+        Text("\(Int((rate * 100).rounded()))")
+            .font(.system(size: 18, weight: .bold, design: .rounded))
+            .foregroundStyle(winRateColor(for: rate))
+            .minimumScaleFactor(0.8)
+            .lineLimit(1)
+            .background {
+                if animationsEnabled {
+                    ZStack {
+                        if fireIntensity > 0.01 {
+                            WinRateFireAura(intensity: fireIntensity)
+                        }
+                        if iceIntensity > 0.01 {
+                            WinRateIceAura(intensity: iceIntensity)
+                        }
+                    }
                 }
             }
-
-            Text("\(Int((rate * 100).rounded()))")
-                .font(.system(size: 18, weight: .bold, design: .rounded))
-                .foregroundStyle(winRateColor(for: rate))
-                .minimumScaleFactor(0.8)
-                .lineLimit(1)
-        }
     }
 
     /// 0–50%: very light blue → white. 51–100%: white → bright fire orange/red.

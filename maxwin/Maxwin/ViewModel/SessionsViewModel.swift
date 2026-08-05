@@ -88,6 +88,30 @@ final class SessionsViewModel {
         liveSessionViewModel = nil
     }
 
+    /// Persists the live recording as a new session, then dismisses the live sheet.
+    func saveLiveSession() async {
+        guard let liveSessionViewModel else { return }
+
+        liveSessionViewModel.isSaving = true
+        defer { liveSessionViewModel.isSaving = false }
+
+        guard let session = liveSessionViewModel.makeSession() else { return }
+
+        isMutating = true
+        defer { isMutating = false }
+
+        do {
+            _ = try await sessionService.createSession(session)
+            self.liveSessionViewModel = nil
+            await load()
+            await refreshTrackCache()
+        } catch let error as SessionServiceError {
+            liveSessionViewModel.errorMessage = error.localizedDescription
+        } catch {
+            liveSessionViewModel.errorMessage = "Couldn't save session. Try again."
+        }
+    }
+
     func beginEditSession(_ session: PokerSession) {
         editorViewModel = SessionEditorViewModel(
             draft: SessionDraft(session: session),

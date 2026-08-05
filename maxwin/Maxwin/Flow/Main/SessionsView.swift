@@ -91,9 +91,15 @@ struct SessionsView: View {
             }
             .fullScreenCover(isPresented: $viewModel.isLiveSessionPresented) {
                 if let liveSessionViewModel = viewModel.liveSessionViewModel {
-                    LiveSessionView(viewModel: liveSessionViewModel) {
-                        viewModel.discardLiveSession()
-                    }
+                    LiveSessionView(
+                        viewModel: liveSessionViewModel,
+                        onSave: {
+                            await viewModel.saveLiveSession()
+                        },
+                        onDiscard: {
+                            viewModel.discardLiveSession()
+                        }
+                    )
                 }
             }
             .confirmationDialog(

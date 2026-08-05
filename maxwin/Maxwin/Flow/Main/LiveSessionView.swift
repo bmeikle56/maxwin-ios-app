@@ -9,13 +9,14 @@ import SwiftUI
 
 struct LiveSessionView: View {
     @Bindable var viewModel: LiveSessionViewModel
+    var onSave: () async -> Void
     var onDiscard: () -> Void
 
     @State private var showingDiscardConfirm = false
     @FocusState private var focusedField: Field?
 
     private enum Field: Hashable {
-        case holeCard1, holeCard2, result, notes
+        case smallBlind, bigBlind, holeCard1, holeCard2, result, notes
     }
 
     var body: some View {
@@ -27,20 +28,35 @@ struct LiveSessionView: View {
                 let fieldPadding: CGFloat = compact ? 8 : 10
 
                 VStack(spacing: 0) {
-                    VStack(spacing: sectionSpacing) {
-                        timerSection(compact: compact, cardPadding: cardPadding)
-                        handsPlayedSection(compact: compact, cardPadding: cardPadding)
-                        currentHandSection(
-                            compact: compact,
-                            cardPadding: cardPadding,
-                            fieldPadding: fieldPadding
-                        )
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.top, compact ? 6 : 10)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                    ScrollView {
+                        VStack(spacing: sectionSpacing) {
+                            timerSection(compact: compact, cardPadding: cardPadding)
+                            handsPlayedSection(compact: compact, cardPadding: cardPadding)
+                            currentHandSection(
+                                compact: compact,
+                                cardPadding: cardPadding,
+                                fieldPadding: fieldPadding
+                            )
+                            stakesAndBBSection(
+                                compact: compact,
+                                cardPadding: cardPadding,
+                                fieldPadding: fieldPadding
+                            )
 
-                    discardBar(compact: compact)
+                            if let errorMessage = viewModel.errorMessage {
+                                Text(errorMessage)
+                                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                                    .foregroundStyle(MaxwinTheme.lossRed)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.top, compact ? 6 : 10)
+                        .padding(.bottom, 8)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+                    bottomActions(compact: compact)
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -114,6 +130,84 @@ struct LiveSessionView: View {
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .strokeBorder(MaxwinTheme.fieldStroke, lineWidth: 1)
         }
+    }
+
+    private func stakesAndBBSection(
+        compact: Bool,
+        cardPadding: CGFloat,
+        fieldPadding: CGFloat
+    ) -> some View {
+        HStack(spacing: 12) {
+            HStack(spacing: 8) {
+                Text("SB")
+                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                    .foregroundStyle(MaxwinTheme.mutedCream)
+
+                TextField(
+                    "0",
+                    value: $viewModel.smallBlind,
+                    format: .number.precision(.fractionLength(0...2))
+                )
+                .keyboardType(.decimalPad)
+                .focused($focusedField, equals: .smallBlind)
+                .multilineTextAlignment(.trailing)
+                .font(.system(size: 16, weight: .semibold, design: .rounded))
+                .foregroundStyle(MaxwinTheme.cream)
+                .frame(minWidth: 36, maxWidth: 56)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, fieldPadding)
+            .background(MaxwinTheme.panelFill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+
+            HStack(spacing: 8) {
+                Text("BB")
+                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                    .foregroundStyle(MaxwinTheme.mutedCream)
+
+                TextField(
+                    "0",
+                    value: $viewModel.bigBlind,
+                    format: .number.precision(.fractionLength(0...2))
+                )
+                .keyboardType(.decimalPad)
+                .focused($focusedField, equals: .bigBlind)
+                .multilineTextAlignment(.trailing)
+                .font(.system(size: 16, weight: .semibold, design: .rounded))
+                .foregroundStyle(MaxwinTheme.cream)
+                .frame(minWidth: 36, maxWidth: 56)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, fieldPadding)
+            .background(MaxwinTheme.panelFill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+
+            Spacer(minLength: 8)
+
+            VStack(alignment: .trailing, spacing: 2) {
+                Text("BB won")
+                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                    .foregroundStyle(MaxwinTheme.mutedCream)
+
+                Text(viewModel.formattedBBWon)
+                    .font(.system(size: compact ? 22 : 26, weight: .bold, design: .rounded))
+                    .foregroundStyle(bbWonColor)
+                    .monospacedDigit()
+                    .contentTransition(.numericText())
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+            }
+        }
+        .padding(cardPadding)
+        .background(MaxwinTheme.fieldFill, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .strokeBorder(MaxwinTheme.fieldStroke, lineWidth: 1)
+        }
+    }
+
+    private var bbWonColor: Color {
+        if viewModel.bbWon > 0 { return MaxwinTheme.winGreen }
+        if viewModel.bbWon < 0 { return MaxwinTheme.lossRed }
+        return MaxwinTheme.cream
     }
 
     private func handsPlayedSection(compact: Bool, cardPadding: CGFloat) -> some View {
@@ -269,26 +363,57 @@ struct LiveSessionView: View {
         }
     }
 
-    private func discardBar(compact: Bool) -> some View {
-        Button {
-            requestDiscard()
-        } label: {
-            HStack(spacing: 8) {
-                Image(systemName: "trash")
-                    .font(.system(size: 14, weight: .semibold))
-                Text("Discard session")
-                    .font(.system(size: 15, weight: .semibold, design: .rounded))
+    private func bottomActions(compact: Bool) -> some View {
+        VStack(spacing: compact ? 8 : 10) {
+            Button {
+                focusedField = nil
+                Task { await onSave() }
+            } label: {
+                HStack(spacing: 8) {
+                    if viewModel.isSaving {
+                        ProgressView()
+                            .tint(MaxwinTheme.feltDeep)
+                    } else {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 14, weight: .semibold))
+                        Text("Save session")
+                            .font(.system(size: 15, weight: .semibold, design: .rounded))
+                    }
+                }
+                .foregroundStyle(MaxwinTheme.feltDeep)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, compact ? 12 : 14)
+                .background(
+                    viewModel.canSave && !viewModel.isSaving
+                    ? MaxwinTheme.gold
+                    : MaxwinTheme.gold.opacity(0.4),
+                    in: RoundedRectangle(cornerRadius: 14, style: .continuous)
+                )
             }
-            .foregroundStyle(MaxwinTheme.lossRed)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, compact ? 12 : 14)
-            .background(MaxwinTheme.panelFill, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .strokeBorder(MaxwinTheme.lossRed.opacity(0.35), lineWidth: 1)
+            .buttonStyle(.plain)
+            .disabled(!viewModel.canSave || viewModel.isSaving)
+
+            Button {
+                requestDiscard()
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "trash")
+                        .font(.system(size: 14, weight: .semibold))
+                    Text("Discard session")
+                        .font(.system(size: 15, weight: .semibold, design: .rounded))
+                }
+                .foregroundStyle(MaxwinTheme.lossRed)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, compact ? 12 : 14)
+                .background(MaxwinTheme.panelFill, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .strokeBorder(MaxwinTheme.lossRed.opacity(0.35), lineWidth: 1)
+                }
             }
+            .buttonStyle(.plain)
+            .disabled(viewModel.isSaving)
         }
-        .buttonStyle(.plain)
         .padding(.horizontal, 16)
         .padding(.top, compact ? 8 : 10)
         .padding(.bottom, compact ? 8 : 10)
@@ -300,5 +425,9 @@ struct LiveSessionView: View {
 }
 
 #Preview {
-    LiveSessionView(viewModel: LiveSessionViewModel(), onDiscard: {})
+    LiveSessionView(
+        viewModel: LiveSessionViewModel(),
+        onSave: {},
+        onDiscard: {}
+    )
 }
