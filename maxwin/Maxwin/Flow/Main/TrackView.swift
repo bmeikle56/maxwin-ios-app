@@ -140,7 +140,7 @@ struct TrackView: View {
 
     private var hoursPlayedLabel: String {
         let hours = viewModel.totalHoursPlayed
-        return hours == 1 ? "1 hour played" : "\(hours) hours played"
+        return hours == 1 ? "1 hour" : "\(hours) hours"
     }
 
     private var loadingContent: some View {
@@ -234,7 +234,7 @@ struct TrackView: View {
                 .frame(width: jesterSize, height: jesterSize)
                 .accessibilityHidden(true)
 
-            Text("You gotta bet bigger!")
+            Text("Bet bigger!")
                 .font(.system(size: 11, weight: .semibold, design: .rounded))
                 .foregroundStyle(MaxwinTheme.mutedCream)
                 .lineLimit(1)
