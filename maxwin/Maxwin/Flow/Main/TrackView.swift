@@ -15,28 +15,37 @@ struct TrackView: View {
     @State private var metricsProgress: Double = 0
     @State private var metricsGeneration = 0
     @State private var metricsAnimationTask: Task<Void, Never>?
+    @State private var showingBBPer100Info = false
 
     private let metricsCountDuration: TimeInterval = 2.55
 
     var body: some View {
         NavigationStack {
-            VStack(alignment: .leading, spacing: 20) {
-                rangePicker
+            ZStack {
+                VStack(alignment: .leading, spacing: 20) {
+                    rangePicker
 
-                if viewModel.isLoading {
-                    loadingContent
-                } else {
-                    summaryHeader
-                    metricsSection
+                    if viewModel.isLoading {
+                        loadingContent
+                    } else {
+                        summaryHeader
+                        metricsSection
+                    }
+
+                    Spacer(minLength: 0)
                 }
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
 
-                Spacer(minLength: 0)
+                if showingBBPer100Info {
+                    bbPer100InfoOverlay
+                        .transition(.opacity)
+                }
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 8)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .feltScreenBackground()
-            .navigationTitle("Track")
+            .toolbar(.hidden, for: .navigationBar)
+            .animation(.easeInOut(duration: 0.22), value: showingBBPer100Info)
             .onAppear {
                 Task { await appearOnTrackTab() }
             }
@@ -183,7 +192,7 @@ struct TrackView: View {
             horizontalMetricsDivider
 
             HStack(spacing: 0) {
-                statTile(title: "Avg BB/100") {
+                statTile(title: "BB/100", showsInfo: true) {
                     if let target = viewModel.averageBBPer100 {
                         AnimatedBBPer100Text(
                             value: target * metricsProgress,
@@ -224,6 +233,54 @@ struct TrackView: View {
         }
     }
 
+    private var bbPer100InfoOverlay: some View {
+        ZStack {
+            ZStack {
+                Color.black.opacity(0.22)
+                Rectangle()
+                    .fill(.ultraThinMaterial)
+                    .opacity(0.35)
+            }
+            .ignoresSafeArea()
+            .onTapGesture {
+                showingBBPer100Info = false
+            }
+
+            VStack(spacing: 14) {
+                Text("BB/100")
+                    .font(.system(size: 20, weight: .bold, design: .rounded))
+                    .foregroundStyle(MaxwinTheme.cream)
+
+                Text("Big blinds won or lost per 100 hands. It normalizes your results across different stakes and session lengths so you can compare performance over time.")
+                    .font(.system(size: 14, weight: .medium, design: .rounded))
+                    .foregroundStyle(MaxwinTheme.mutedCream)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Button {
+                    showingBBPer100Info = false
+                } label: {
+                    Text("Got it")
+                        .font(.system(size: 14, weight: .semibold, design: .rounded))
+                        .foregroundStyle(MaxwinTheme.feltDeep)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(MaxwinTheme.cream, in: Capsule())
+                }
+                .buttonStyle(.plain)
+                .padding(.top, 4)
+            }
+            .padding(22)
+            .frame(maxWidth: 300)
+            .background(MaxwinTheme.panelFill, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .strokeBorder(MaxwinTheme.fieldStroke, lineWidth: 1)
+            }
+            .padding(.horizontal, 32)
+        }
+    }
+
     private var placeholderMetric: some View {
         Text("—")
             .font(.system(size: 18, weight: .bold, design: .rounded))
@@ -253,13 +310,28 @@ struct TrackView: View {
 
     private func statTile<Content: View>(
         title: String,
+        showsInfo: Bool = false,
         @ViewBuilder value: () -> Content
     ) -> some View {
         VStack(spacing: 6) {
-            Text(title)
-                .font(.system(size: 12, weight: .medium, design: .rounded))
-                .foregroundStyle(MaxwinTheme.mutedCream)
-                .multilineTextAlignment(.center)
+            HStack(spacing: 3) {
+                Text(title)
+                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                    .foregroundStyle(MaxwinTheme.mutedCream)
+                    .multilineTextAlignment(.center)
+
+                if showsInfo {
+                    Button {
+                        showingBBPer100Info = true
+                    } label: {
+                        Image(systemName: "info.circle")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(MaxwinTheme.mutedCream.opacity(0.85))
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("What is BB/100?")
+                }
+            }
 
             value()
         }
@@ -353,12 +425,12 @@ private struct AnimatedBBPer100Text: View, Animatable {
         String(format: "%.1f", value)
     }
 
-    /// −1 → 0: light blue ice → white. 0 → +1: white → bright fire.
+    /// −1 → 0: light blue ice → white. 0 → +1: white → bright orange-yellow fire.
     private func bbPer100Color(for t: Double) -> Color {
         let clamped = min(max(t, -1), 1)
         let lightBlue = (r: 0.78, g: 0.93, b: 1.0)
         let white = (r: 1.0, g: 1.0, b: 1.0)
-        let fire = (r: 1.0, g: 0.28, b: 0.06)
+        let fire = (r: 1.0, g: 0.62, b: 0.14)
 
         if clamped <= 0 {
             let u = clamped + 1 // −1 → 0, 0 → 1

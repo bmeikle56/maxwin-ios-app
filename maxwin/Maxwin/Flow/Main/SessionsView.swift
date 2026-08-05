@@ -39,8 +39,6 @@ struct SessionsView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .feltScreenBackground()
-            .navigationTitle("Sessions")
-            .searchable(text: $viewModel.searchText, prompt: "Venue, stakes, cards…")
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button {
