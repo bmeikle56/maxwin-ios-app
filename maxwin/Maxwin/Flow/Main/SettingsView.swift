@@ -108,7 +108,7 @@ struct SettingsView: View {
                     onAnimationPreferenceChanged?()
                 }
             )) {
-                Text("Y-axis labels")
+                Text("Labels")
                     .font(.system(size: 16, weight: .medium, design: .rounded))
                     .foregroundStyle(MaxwinTheme.cream)
             }
