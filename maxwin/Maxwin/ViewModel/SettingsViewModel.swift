@@ -29,6 +29,10 @@ final class SettingsViewModel {
         settingsService.settings.animationsEnabled
     }
 
+    var tipsEnabled: Bool {
+        settingsService.settings.tipsEnabled
+    }
+
     init(
         authService: AuthServicing,
         settingsService: SettingsServicing,
@@ -41,6 +45,10 @@ final class SettingsViewModel {
 
     func setAnimationsEnabled(_ enabled: Bool) {
         settingsService.updateAnimationsEnabled(enabled)
+    }
+
+    func setTipsEnabled(_ enabled: Bool) {
+        settingsService.updateTipsEnabled(enabled)
     }
 
     func signOut() async {

@@ -81,13 +81,16 @@ final class TrackViewModel {
     }
 
     var animationsEnabled: Bool
+    var tipsEnabled: Bool
 
     init(
         trackDataService: TrackDataServicing,
-        animationsEnabled: Bool = true
+        animationsEnabled: Bool = true,
+        tipsEnabled: Bool = true
     ) {
         self.trackDataService = trackDataService
         self.animationsEnabled = animationsEnabled
+        self.tipsEnabled = tipsEnabled
         // Apply cached data immediately when already warm (e.g. post-login prefetch).
         if let snapshot = trackDataService.snapshot(for: selectedRange) {
             apply(snapshot)

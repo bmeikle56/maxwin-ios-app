@@ -11,6 +11,7 @@ import Observation
 protocol SettingsServicing: AnyObject {
     var settings: AppSettings { get }
     func updateAnimationsEnabled(_ enabled: Bool)
+    func updateTipsEnabled(_ enabled: Bool)
 }
 
 @Observable
@@ -39,6 +40,11 @@ final class MockSettingsService: SettingsServicing {
 
     func updateAnimationsEnabled(_ enabled: Bool) {
         settings.animationsEnabled = enabled
+        persist()
+    }
+
+    func updateTipsEnabled(_ enabled: Bool) {
+        settings.tipsEnabled = enabled
         persist()
     }
 

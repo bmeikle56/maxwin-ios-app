@@ -9,7 +9,7 @@ import SwiftUI
 
 struct SettingsView: View {
     @Bindable var viewModel: SettingsViewModel
-    var onAnimationPreferenceChanged: (() -> Void)?
+    var onPreferenceChanged: (() -> Void)?
 
     var body: some View {
         NavigationStack {
@@ -90,10 +90,29 @@ struct SettingsView: View {
                 get: { viewModel.animationsEnabled },
                 set: { newValue in
                     viewModel.setAnimationsEnabled(newValue)
-                    onAnimationPreferenceChanged?()
+                    onPreferenceChanged?()
                 }
             )) {
                 Text("Animations")
+                    .font(.system(size: 16, weight: .medium, design: .rounded))
+                    .foregroundStyle(MaxwinTheme.cream)
+            }
+            .tint(Color.white.opacity(0.45))
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+
+            Divider()
+                .background(MaxwinTheme.fieldStroke)
+                .padding(.leading, 16)
+
+            Toggle(isOn: Binding(
+                get: { viewModel.tipsEnabled },
+                set: { newValue in
+                    viewModel.setTipsEnabled(newValue)
+                    onPreferenceChanged?()
+                }
+            )) {
+                Text("Tips")
                     .font(.system(size: 16, weight: .medium, design: .rounded))
                     .foregroundStyle(MaxwinTheme.cream)
             }
