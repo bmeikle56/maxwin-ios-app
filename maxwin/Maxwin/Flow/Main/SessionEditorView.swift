@@ -65,7 +65,35 @@ struct SessionEditorView: View {
                 .tint(MaxwinTheme.gold)
 
             TextField("Venue", text: $viewModel.draft.venue)
-            TextField("Stakes", text: $viewModel.draft.stakes)
+
+            HStack(spacing: 10) {
+                Text("Stakes")
+                    .foregroundStyle(.primary)
+
+                Spacer(minLength: 8)
+
+                Text("SB")
+                    .foregroundStyle(MaxwinTheme.mutedCream)
+                TextField(
+                    "0",
+                    value: $viewModel.draft.smallBlind,
+                    format: .number.precision(.fractionLength(0...2))
+                )
+                .keyboardType(.numberPad)
+                .multilineTextAlignment(.trailing)
+                .frame(minWidth: 44, maxWidth: 64)
+
+                Text("BB")
+                    .foregroundStyle(MaxwinTheme.mutedCream)
+                TextField(
+                    "0",
+                    value: $viewModel.draft.bigBlind,
+                    format: .number.precision(.fractionLength(0...2))
+                )
+                .keyboardType(.numberPad)
+                .multilineTextAlignment(.trailing)
+                .frame(minWidth: 44, maxWidth: 64)
+            }
 
             Picker("Game type", selection: $viewModel.draft.gameType) {
                 ForEach(GameType.allCases, id: \.self) { type in
@@ -73,26 +101,26 @@ struct SessionEditorView: View {
                 }
             }
 
-            Stepper(
-                "Duration: \(viewModel.draft.durationMinutes) min",
+            TextField(
+                "Duration (min)",
                 value: $viewModel.draft.durationMinutes,
-                in: 0...24 * 60,
-                step: 15
+                format: .number.precision(.fractionLength(0))
             )
+            .keyboardType(.numberPad)
 
             TextField(
                 "Buy-in",
                 value: $viewModel.draft.buyIn,
-                format: .currency(code: "USD").precision(.fractionLength(0))
+                format: .number.precision(.fractionLength(0))
             )
-            .keyboardType(.decimalPad)
+            .keyboardType(.numberPad)
 
             TextField(
                 "Cash-out",
                 value: $viewModel.draft.cashOut,
-                format: .currency(code: "USD").precision(.fractionLength(0))
+                format: .number.precision(.fractionLength(0))
             )
-            .keyboardType(.decimalPad)
+            .keyboardType(.numberPad)
         }
     }
 

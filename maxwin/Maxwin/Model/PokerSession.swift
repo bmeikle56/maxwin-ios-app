@@ -45,8 +45,8 @@ struct PokerSession: Identifiable, Equatable, Codable, Sendable {
 }
 
 enum StakesParsing {
-    /// Extracts the big blind from cash stake text. Returns nil for buy-in / unknown formats.
-    static func bigBlind(from stakes: String) -> Double? {
+    /// Extracts small and big blinds from cash stake text like `2/5 NL`. Returns nil for buy-in / unknown formats.
+    static func smallAndBigBlind(from stakes: String) -> (small: Double, big: Double)? {
         let trimmed = stakes.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
 
@@ -54,8 +54,8 @@ enum StakesParsing {
             let match = String(trimmed[slash])
             let parts = match.split(whereSeparator: { $0 == "/" || $0.isWhitespace })
                 .compactMap { Double($0) }
-            if parts.count >= 2, parts[1] > 0 {
-                return parts[1]
+            if parts.count >= 2, parts[0] > 0, parts[1] > 0 {
+                return (parts[0], parts[1])
             }
         }
 
@@ -63,10 +63,28 @@ enum StakesParsing {
             let match = String(trimmed[nl])
             let digits = match.prefix { $0.isNumber || $0 == "." }
             if let value = Double(digits), value > 0 {
-                return value / 100
+                let big = value / 100
+                return (big / 2, big)
             }
         }
 
         return nil
+    }
+
+    /// Extracts the big blind from common stake strings like `2/5 NL` or `25NL`.
+    static func bigBlind(from stakes: String) -> Double? {
+        smallAndBigBlind(from: stakes)?.big
+    }
+
+    /// Formats blinds as `1/2` or `0.5/1`.
+    static func format(smallBlind: Double, bigBlind: Double) -> String {
+        "\(formatBlind(smallBlind))/\(formatBlind(bigBlind))"
+    }
+
+    private static func formatBlind(_ value: Double) -> String {
+        if value.rounded() == value {
+            return String(Int(value))
+        }
+        return String(format: "%g", value)
     }
 }

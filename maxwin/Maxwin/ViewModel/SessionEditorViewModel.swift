@@ -56,10 +56,26 @@ final class SessionEditorViewModel {
     @discardableResult
     func save() async -> Bool {
         errorMessage = nil
+
+        guard let buyIn = draft.buyIn, let cashOut = draft.cashOut else {
+            errorMessage = "Enter a buy-in and cash-out."
+            return false
+        }
+
+        guard let smallBlind = draft.smallBlind, let bigBlind = draft.bigBlind else {
+            errorMessage = "Enter small blind and big blind."
+            return false
+        }
+
         isSaving = true
         defer { isSaving = false }
 
-        let session = draft.makeSession()
+        let session = draft.makeSession(
+            buyIn: buyIn,
+            cashOut: cashOut,
+            smallBlind: smallBlind,
+            bigBlind: bigBlind
+        )
 
         do {
             if draft.isEditing {

@@ -19,6 +19,7 @@ final class SessionsViewModel {
     var errorMessage: String?
     var sessionPendingDelete: PokerSession?
     var editorViewModel: SessionEditorViewModel?
+    var liveSessionViewModel: LiveSessionViewModel?
 
     private let sessionService: SessionServicing
     private let trackDataService: TrackDataServicing
@@ -37,6 +38,15 @@ final class SessionsViewModel {
         set {
             if !newValue {
                 editorViewModel = nil
+            }
+        }
+    }
+
+    var isLiveSessionPresented: Bool {
+        get { liveSessionViewModel != nil }
+        set {
+            if !newValue {
+                liveSessionViewModel = nil
             }
         }
     }
@@ -68,6 +78,14 @@ final class SessionsViewModel {
             draft: .blank(),
             sessionService: sessionService
         )
+    }
+
+    func beginLiveSession() {
+        liveSessionViewModel = LiveSessionViewModel()
+    }
+
+    func discardLiveSession() {
+        liveSessionViewModel = nil
     }
 
     func beginEditSession(_ session: PokerSession) {
