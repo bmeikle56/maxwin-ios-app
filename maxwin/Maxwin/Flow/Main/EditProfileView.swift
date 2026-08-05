@@ -74,7 +74,7 @@ struct EditProfileView: View {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 16)
                     .background(
-                        MaxwinTheme.gold.opacity(viewModel.canSave || viewModel.isSaving ? 1 : 0.45),
+                        MaxwinTheme.cream.opacity(viewModel.canSave || viewModel.isSaving ? 1 : 0.45),
                         in: RoundedRectangle(cornerRadius: 14, style: .continuous)
                     )
                 }
