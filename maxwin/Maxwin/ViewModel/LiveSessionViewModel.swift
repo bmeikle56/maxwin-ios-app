@@ -78,6 +78,7 @@ final class LiveSessionViewModel {
     }
 
     var canSave: Bool {
+        guard isPaused else { return false }
         guard let smallBlind, smallBlind > 0,
               let bigBlind, bigBlind > 0 else { return false }
         return true

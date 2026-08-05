@@ -380,13 +380,15 @@ struct LiveSessionView: View {
                             .font(.system(size: 15, weight: .semibold, design: .rounded))
                     }
                 }
-                .foregroundStyle(MaxwinTheme.feltDeep)
+                .foregroundStyle(
+                    viewModel.canSave && !viewModel.isSaving
+                    ? MaxwinTheme.feltDeep
+                    : MaxwinTheme.feltDeep.opacity(0.4)
+                )
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, compact ? 12 : 14)
                 .background(
-                    viewModel.canSave && !viewModel.isSaving
-                    ? MaxwinTheme.gold
-                    : MaxwinTheme.gold.opacity(0.4),
+                    MaxwinTheme.cream,
                     in: RoundedRectangle(cornerRadius: 14, style: .continuous)
                 )
             }
