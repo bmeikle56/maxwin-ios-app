@@ -230,7 +230,35 @@ struct TrackView: View {
                 }
             }
             .fixedSize(horizontal: false, vertical: true)
+
+            betBiggerBanner
+                .padding(.top, metricsGap)
         }
+    }
+
+    private var betBiggerBanner: some View {
+        HStack(alignment: .center, spacing: 12) {
+            Image("Jester")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 34, height: 34)
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .accessibilityHidden(true)
+
+            Text("You gotta bet bigger!")
+                .font(.system(size: 16, weight: .semibold, design: .rounded))
+                .foregroundStyle(MaxwinTheme.mutedCream)
+                .multilineTextAlignment(.leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            Color(white: 0.18).opacity(0.35),
+            in: RoundedRectangle(cornerRadius: 18, style: .continuous)
+        )
     }
 
     private var bbPer100InfoOverlay: some View {
