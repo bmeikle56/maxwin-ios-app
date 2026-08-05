@@ -115,6 +115,49 @@ struct MetricFireAura: View {
                         )
                         .blur(radius: (3.5 + CGFloat(index) * 0.8) * max(scaleX, scaleY))
                 }
+
+                ForEach(0..<4, id: \.self) { index in
+                    let phase = Double(index) * 1.73
+                    let speed = 0.18 + Double(index % 2) * 0.04
+                    let cycle = (t * speed + phase).truncatingRemainder(dividingBy: 1.0)
+                    let riseProgress = cycle < 0 ? cycle + 1 : cycle
+                    // Stable per-emission pick: ~80% ember, ~20% ash.
+                    let emissionID = index &* 10_007 &+ Int(floor(t * speed + phase))
+                    let isEmber = (emissionID &* 2_654_435_761) % 100 < 80
+                    let particleSize = (isEmber ? 1.1 : 1.35)
+                        * (1.0 + CGFloat(index % 2) * 0.25)
+                        * max(scaleX, scaleY)
+                    let xBase = (CGFloat(index) / 3.0 - 0.5) * width * 0.7
+                    let xDrift = CGFloat(sin(t * (1.1 + Double(index) * 0.22) + phase)) * 4 * scaleX
+                    let y = (height * 0.42) - CGFloat(riseProgress) * height * 1.05
+                    let fade = sin(riseProgress * .pi)
+
+                    if isEmber {
+                        let glow = 0.75 + 0.25 * sin(t * (5 + Double(index)) + phase)
+                        Circle()
+                            .fill(
+                                RadialGradient(
+                                    colors: [
+                                        Color(red: 1.0, green: 0.92, blue: 0.45).opacity(0.9 * intensity * fade * glow),
+                                        Color(red: 1.0, green: 0.45, blue: 0.08).opacity(0.65 * intensity * fade),
+                                        Color.clear
+                                    ],
+                                    center: .center,
+                                    startRadius: 0,
+                                    endRadius: particleSize * 1.3
+                                )
+                            )
+                            .frame(width: particleSize * 2, height: particleSize * 2)
+                            .offset(x: xBase + xDrift, y: y)
+                            .blur(radius: 0.35)
+                    } else {
+                        Circle()
+                            .fill(Color.black.opacity(0.55 * intensity * fade))
+                            .frame(width: particleSize * 1.6, height: particleSize * 1.6)
+                            .offset(x: xBase + xDrift, y: y)
+                            .blur(radius: 0.25)
+                    }
+                }
             }
         }
         .frame(width: width, height: height)

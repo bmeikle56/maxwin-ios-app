@@ -316,7 +316,7 @@ struct TrackView: View {
             .padding(.vertical, 4)
             .frame(maxWidth: .infinity)
             .background(
-                Color(white: 0.42).opacity(0.35),
+                Color(white: 0.42).opacity(0.18),
                 in: RoundedRectangle(cornerRadius: 6, style: .continuous)
             )
 
