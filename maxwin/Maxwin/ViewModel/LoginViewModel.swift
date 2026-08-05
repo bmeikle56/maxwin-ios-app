@@ -19,9 +19,11 @@ final class LoginViewModel {
     var isLoading = false
 
     private let authService: AuthServicing
+    private let trackDataService: TrackDataServicing
 
-    init(authService: AuthServicing) {
+    init(authService: AuthServicing, trackDataService: TrackDataServicing) {
         self.authService = authService
+        self.trackDataService = trackDataService
     }
 
     func signIn() async {
@@ -33,6 +35,7 @@ final class LoginViewModel {
 
         do {
             _ = try await authService.signIn(with: credentials)
+            await trackDataService.prefetch()
         } catch let error as AuthError {
             errorMessage = error.localizedDescription
         } catch {

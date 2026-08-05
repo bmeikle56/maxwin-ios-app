@@ -21,9 +21,15 @@ final class SessionsViewModel {
     var editorViewModel: SessionEditorViewModel?
 
     private let sessionService: SessionServicing
+    private let trackDataService: TrackDataServicing
+    var onTrackDataChanged: (() -> Void)?
 
-    init(sessionService: SessionServicing) {
+    init(
+        sessionService: SessionServicing,
+        trackDataService: TrackDataServicing
+    ) {
         self.sessionService = sessionService
+        self.trackDataService = trackDataService
     }
 
     var isEditorPresented: Bool {
@@ -74,6 +80,7 @@ final class SessionsViewModel {
     func handleEditorSaved() async {
         editorViewModel = nil
         await load()
+        await refreshTrackCache()
     }
 
     func requestDelete(_ session: PokerSession) {
@@ -89,6 +96,7 @@ final class SessionsViewModel {
         do {
             try await sessionService.deleteSession(id: session.id)
             sessions.removeAll { $0.id == session.id }
+            await refreshTrackCache()
         } catch {
             errorMessage = "Couldn't delete session. Try again."
         }
@@ -112,6 +120,11 @@ final class SessionsViewModel {
         } catch {
             errorMessage = "Couldn't update favorite. Try again."
         }
+    }
+
+    private func refreshTrackCache() async {
+        await trackDataService.refresh()
+        onTrackDataChanged?()
     }
 
     private func matchesSearch(_ session: PokerSession) -> Bool {

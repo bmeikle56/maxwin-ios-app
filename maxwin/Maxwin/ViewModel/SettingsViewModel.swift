@@ -18,6 +18,7 @@ final class SettingsViewModel {
 
     private let authService: AuthServicing
     private let settingsService: SettingsServicing
+    private let trackDataService: TrackDataServicing
 
     var username: String {
         authService.currentUser?.username ?? "Player"
@@ -27,9 +28,14 @@ final class SettingsViewModel {
         settingsService.settings.animationsEnabled
     }
 
-    init(authService: AuthServicing, settingsService: SettingsServicing) {
+    init(
+        authService: AuthServicing,
+        settingsService: SettingsServicing,
+        trackDataService: TrackDataServicing
+    ) {
         self.authService = authService
         self.settingsService = settingsService
+        self.trackDataService = trackDataService
     }
 
     func setAnimationsEnabled(_ enabled: Bool) {
@@ -40,6 +46,7 @@ final class SettingsViewModel {
         isSigningOut = true
         defer { isSigningOut = false }
         await authService.signOut()
+        trackDataService.clear()
     }
 
     func deleteAccount() async {
@@ -49,6 +56,7 @@ final class SettingsViewModel {
 
         do {
             try await authService.deleteAccount()
+            trackDataService.clear()
         } catch {
             errorMessage = "Couldn't delete account. Try again."
         }

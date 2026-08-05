@@ -15,7 +15,7 @@ final class RootViewModel {
     let onboardingService: MockOnboardingService
     let settingsService: MockSettingsService
     let sessionService: MockSessionService
-    let earningsService: MockEarningsService
+    let trackDataService: MockTrackDataService
 
     let onboardingViewModel: OnboardingViewModel
     let loginViewModel: LoginViewModel
@@ -26,23 +26,31 @@ final class RootViewModel {
         onboardingService: MockOnboardingService = MockOnboardingService(),
         settingsService: MockSettingsService = MockSettingsService(),
         sessionService: MockSessionService = MockSessionService(),
-        earningsService: MockEarningsService? = nil
+        trackDataService: MockTrackDataService? = nil
     ) {
-        let earnings = earningsService ?? MockEarningsService(sessionService: sessionService)
+        let trackData = trackDataService ?? MockTrackDataService(sessionService: sessionService)
 
         self.authService = authService
         self.onboardingService = onboardingService
         self.settingsService = settingsService
         self.sessionService = sessionService
-        self.earningsService = earnings
+        self.trackDataService = trackData
 
         self.onboardingViewModel = OnboardingViewModel(onboardingService: onboardingService)
-        self.loginViewModel = LoginViewModel(authService: authService)
+        self.loginViewModel = LoginViewModel(
+            authService: authService,
+            trackDataService: trackData
+        )
         self.mainTabViewModel = MainTabViewModel(
             authService: authService,
             sessionService: sessionService,
-            earningsService: earnings,
+            trackDataService: trackData,
             settingsService: settingsService
         )
+
+        // Restored sessions should warm the Track cache before the tab appears.
+        if authService.isAuthenticated {
+            Task { await trackData.prefetch() }
+        }
     }
 }

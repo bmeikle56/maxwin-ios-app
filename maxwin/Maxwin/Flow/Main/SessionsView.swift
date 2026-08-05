@@ -226,5 +226,10 @@ struct SessionsView: View {
 }
 
 #Preview {
-    SessionsView(viewModel: SessionsViewModel(sessionService: MockSessionService()))
+    SessionsView(
+        viewModel: SessionsViewModel(
+            sessionService: MockSessionService(),
+            trackDataService: MockTrackDataService(sessionService: MockSessionService())
+        )
+    )
 }

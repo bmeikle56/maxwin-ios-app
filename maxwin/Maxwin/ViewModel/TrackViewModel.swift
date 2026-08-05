@@ -17,8 +17,7 @@ final class TrackViewModel {
     var isLoading = false
     var errorMessage: String?
 
-    private let earningsService: EarningsServicing
-    private let sessionService: SessionServicing
+    private let trackDataService: TrackDataServicing
 
     var totalProfit: Double {
         points.last?.cumulativeProfit ?? 0
@@ -79,48 +78,57 @@ final class TrackViewModel {
     var animationsEnabled: Bool
 
     init(
-        earningsService: EarningsServicing,
-        sessionService: SessionServicing,
+        trackDataService: TrackDataServicing,
         animationsEnabled: Bool = true
     ) {
-        self.earningsService = earningsService
-        self.sessionService = sessionService
+        self.trackDataService = trackDataService
         self.animationsEnabled = animationsEnabled
+        // Apply cached data immediately when already warm (e.g. post-login prefetch).
+        if let snapshot = trackDataService.snapshot(for: selectedRange) {
+            apply(snapshot)
+        }
     }
 
-    func selectRange(_ range: DateRangeFilter) async {
+    func selectRange(_ range: DateRangeFilter) {
         selectedRange = range
-        await load()
+        if let snapshot = trackDataService.snapshot(for: range) {
+            apply(snapshot)
+        } else {
+            Task { await load() }
+        }
     }
 
+    /// Uses the prefetched cache when ready; otherwise waits on prefetch.
     func load() async {
-        isLoading = true
         errorMessage = nil
-        points = []
-        sessionsInRange = []
+
+        if trackDataService.isReady, let snapshot = trackDataService.snapshot(for: selectedRange) {
+            apply(snapshot)
+            return
+        }
+
+        isLoading = true
         defer { isLoading = false }
 
-        do {
-            async let earnings = earningsService.fetchEarnings(for: selectedRange)
-            async let sessions = sessionService.fetchSessions()
+        await trackDataService.prefetch()
 
-            points = try await earnings
-            sessionsInRange = Self.filteredSessions(try await sessions, for: selectedRange)
-        } catch {
+        if let snapshot = trackDataService.snapshot(for: selectedRange) {
+            apply(snapshot)
+        } else {
             errorMessage = "Couldn't load winnings."
             points = []
             sessionsInRange = []
         }
     }
 
-    private static func filteredSessions(
-        _ sessions: [PokerSession],
-        for range: DateRangeFilter
-    ) -> [PokerSession] {
-        let start = range.startDate()
-        return sessions.filter { session in
-            guard let start else { return true }
-            return session.date >= start
-        }
+    /// Re-applies the current range after the cache is refreshed (session CRUD).
+    func reloadFromCache() {
+        guard let snapshot = trackDataService.snapshot(for: selectedRange) else { return }
+        apply(snapshot)
+    }
+
+    private func apply(_ snapshot: TrackRangeSnapshot) {
+        points = snapshot.points
+        sessionsInRange = snapshot.sessions
     }
 }

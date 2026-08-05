@@ -28,20 +28,28 @@ final class MainTabViewModel {
     init(
         authService: AuthServicing,
         sessionService: SessionServicing,
-        earningsService: EarningsServicing,
+        trackDataService: TrackDataServicing,
         settingsService: MockSettingsService
     ) {
         self.settingsService = settingsService
-        self.sessionsViewModel = SessionsViewModel(sessionService: sessionService)
-        self.trackViewModel = TrackViewModel(
-            earningsService: earningsService,
+        self.sessionsViewModel = SessionsViewModel(
             sessionService: sessionService,
+            trackDataService: trackDataService
+        )
+        let trackViewModel = TrackViewModel(
+            trackDataService: trackDataService,
             animationsEnabled: settingsService.settings.animationsEnabled
         )
+        self.trackViewModel = trackViewModel
         self.settingsViewModel = SettingsViewModel(
             authService: authService,
-            settingsService: settingsService
+            settingsService: settingsService,
+            trackDataService: trackDataService
         )
+
+        sessionsViewModel.onTrackDataChanged = { [weak trackViewModel] in
+            trackViewModel?.reloadFromCache()
+        }
     }
 
     func syncAnimationPreference() {
