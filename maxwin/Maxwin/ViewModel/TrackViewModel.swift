@@ -72,18 +72,15 @@ final class TrackViewModel {
     }
 
     var animationsEnabled: Bool
-    var showYAxisLabels: Bool
 
     init(
         earningsService: EarningsServicing,
         sessionService: SessionServicing,
-        animationsEnabled: Bool = true,
-        showYAxisLabels: Bool = true
+        animationsEnabled: Bool = true
     ) {
         self.earningsService = earningsService
         self.sessionService = sessionService
         self.animationsEnabled = animationsEnabled
-        self.showYAxisLabels = showYAxisLabels
     }
 
     func selectRange(_ range: DateRangeFilter) async {

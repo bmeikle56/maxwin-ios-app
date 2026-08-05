@@ -136,8 +136,7 @@ struct TrackView: View {
             } else {
                 WinningsChartView(
                     points: viewModel.points,
-                    animationsEnabled: viewModel.animationsEnabled,
-                    showYAxisLabels: viewModel.showYAxisLabels
+                    drawProgress: metricsProgress
                 )
                 .frame(maxWidth: .infinity)
                 .frame(height: 260)
