@@ -13,6 +13,7 @@ import Observation
 final class SettingsViewModel {
     var isSigningOut = false
     var isDeletingAccount = false
+    var showSignOutConfirmation = false
     var showDeleteConfirmation = false
     var errorMessage: String?
 

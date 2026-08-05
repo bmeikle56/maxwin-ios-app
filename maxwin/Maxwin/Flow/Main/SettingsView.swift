@@ -33,17 +33,21 @@ struct SettingsView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .feltScreenBackground()
             .navigationTitle("Settings")
-            .confirmationDialog(
-                "Delete account?",
-                isPresented: $viewModel.showDeleteConfirmation,
-                titleVisibility: .visible
-            ) {
+            .alert("Log out?", isPresented: $viewModel.showSignOutConfirmation) {
+                Button("Log out", role: .destructive) {
+                    Task { await viewModel.signOut() }
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("You’ll need to sign in again to access your sessions.")
+            }
+            .alert("Delete account?", isPresented: $viewModel.showDeleteConfirmation) {
                 Button("Delete Account", role: .destructive) {
                     Task { await viewModel.deleteAccount() }
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("This permanently removes your Maxwin account and local session data.")
+                Text("This permanently removes your Maxwin account and local session data. This can’t be undone.")
             }
         }
     }
@@ -109,7 +113,7 @@ struct SettingsView: View {
             sectionTitle("Account")
 
             Button {
-                Task { await viewModel.signOut() }
+                viewModel.showSignOutConfirmation = true
             } label: {
                 settingsRow(
                     title: "Log out",
