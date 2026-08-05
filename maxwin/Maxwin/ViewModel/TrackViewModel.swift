@@ -48,10 +48,12 @@ final class TrackViewModel {
     }
 
     /// Share of sessions that finished at or above break-even.
+    /// Temporary mock for fire-aura testing — restore real calculation when done.
     var sessionWinRate: Double? {
-        guard !sessionsInRange.isEmpty else { return nil }
-        let wins = sessionsInRange.filter { $0.profit >= 0 }.count
-        return Double(wins) / Double(sessionsInRange.count)
+        0.98
+//        guard !sessionsInRange.isEmpty else { return nil }
+//        let wins = sessionsInRange.filter { $0.profit >= 0 }.count
+//        return Double(wins) / Double(sessionsInRange.count)
     }
 
     var animationsEnabled: Bool
