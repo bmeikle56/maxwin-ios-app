@@ -13,6 +13,7 @@ protocol AuthServicing: AnyObject {
     var isAuthenticated: Bool { get }
 
     func signIn(with credentials: AuthCredentials) async throws -> User
+    func updateUsername(_ username: String) async throws -> User
     func signOut() async
     func deleteAccount() async throws
     func requestPasswordReset(for username: String) async throws
@@ -55,6 +56,22 @@ final class MockAuthService: AuthServicing {
         let user = User(id: UUID(), username: credentials.trimmedUsername)
         persist(user: user)
         return user
+    }
+
+    func updateUsername(_ username: String) async throws -> User {
+        try await Task.sleep(nanoseconds: networkDelayNanoseconds)
+
+        let trimmed = username.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            throw AuthError.emptyFields
+        }
+        guard let currentUser else {
+            throw AuthError.unknown
+        }
+
+        let updated = User(id: currentUser.id, username: trimmed)
+        persist(user: updated)
+        return updated
     }
 
     func signOut() async {

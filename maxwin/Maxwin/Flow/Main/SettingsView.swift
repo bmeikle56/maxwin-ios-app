@@ -131,6 +131,24 @@ struct SettingsView: View {
         VStack(alignment: .leading, spacing: 0) {
             sectionTitle("Account")
 
+            NavigationLink {
+                EditProfileView(viewModel: viewModel.makeEditProfileViewModel())
+            } label: {
+                settingsRow(
+                    title: "Edit Profile",
+                    systemImage: "person.crop.circle",
+                    tint: MaxwinTheme.cream,
+                    isLoading: false,
+                    showsChevron: true
+                )
+            }
+            .buttonStyle(.plain)
+            .disabled(viewModel.isSigningOut || viewModel.isDeletingAccount)
+
+            Divider()
+                .background(MaxwinTheme.fieldStroke)
+                .padding(.leading, 52)
+
             Button {
                 viewModel.showSignOutConfirmation = true
             } label: {
@@ -181,7 +199,8 @@ struct SettingsView: View {
         title: String,
         systemImage: String,
         tint: Color,
-        isLoading: Bool
+        isLoading: Bool,
+        showsChevron: Bool = false
     ) -> some View {
         HStack(spacing: 12) {
             Image(systemName: systemImage)
@@ -198,6 +217,10 @@ struct SettingsView: View {
             if isLoading {
                 ProgressView()
                     .tint(MaxwinTheme.gold)
+            } else if showsChevron {
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(MaxwinTheme.mutedCream)
             }
         }
         .padding(.horizontal, 16)
