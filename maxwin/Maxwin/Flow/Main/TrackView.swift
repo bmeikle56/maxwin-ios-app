@@ -126,17 +126,16 @@ struct TrackView: View {
 
             Spacer(minLength: 8)
 
-            VStack(alignment: .trailing, spacing: 6) {
-                Text("Hours played")
-                    .font(.system(size: 13, weight: .medium, design: .rounded))
-                    .foregroundStyle(MaxwinTheme.headerGray)
-
-                Text(PokerSession.formatDuration(minutes: viewModel.totalMinutesPlayed))
-                    .font(.system(size: 13, weight: .medium, design: .rounded))
-                    .foregroundStyle(MaxwinTheme.headerGray)
-                    .multilineTextAlignment(.trailing)
-            }
+            Text(hoursPlayedLabel)
+                .font(.system(size: 13, weight: .medium, design: .rounded))
+                .foregroundStyle(MaxwinTheme.headerGray)
+                .multilineTextAlignment(.trailing)
         }
+    }
+
+    private var hoursPlayedLabel: String {
+        let hours = viewModel.totalHoursPlayed
+        return hours == 1 ? "1 hour played" : "\(hours) hours played"
     }
 
     private var loadingContent: some View {
