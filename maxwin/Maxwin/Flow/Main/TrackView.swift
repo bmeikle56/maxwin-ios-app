@@ -113,23 +113,34 @@ struct TrackView: View {
     }
 
     private var summaryHeader: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 12) {
-            Text(CurrencyFormatting.signedString(from: viewModel.totalProfit))
-                .font(.system(size: 34, weight: .bold, design: .serif))
-                .foregroundStyle(MaxwinTheme.headerGray)
+        HStack(alignment: .center, spacing: 12) {
+            HStack(alignment: .center, spacing: 8) {
+                Text(CurrencyFormatting.signedString(from: viewModel.totalProfit))
+                    .font(.system(size: 34, weight: .bold, design: .serif))
+                    .foregroundStyle(MaxwinTheme.headerGray)
+
+                Capsule()
+                    .fill(MaxwinTheme.headerGray.opacity(0.4))
+                    .frame(width: 1, height: 18)
+
+                Text(hoursPlayedLabel)
+                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                    .foregroundStyle(MaxwinTheme.headerGray)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
 
             Spacer(minLength: 8)
 
-            Text(hoursPlayedLabel)
-                .font(.system(size: 13, weight: .medium, design: .rounded))
-                .foregroundStyle(MaxwinTheme.headerGray)
-                .multilineTextAlignment(.trailing)
+            if viewModel.tipsEnabled {
+                betBiggerBanner
+            }
         }
     }
 
     private var hoursPlayedLabel: String {
         let hours = viewModel.totalHoursPlayed
-        return hours == 1 ? "1 hour played" : "\(hours) hours played"
+        return hours == 1 ? "1 hour" : "\(hours) hours"
     }
 
     private var loadingContent: some View {
@@ -175,9 +186,9 @@ struct TrackView: View {
 
     /// Shared gap: chart↔stats and cell↔cell.
     private let metricsGap: CGFloat = 16
-    private let tipPadding: CGFloat = 14
-    private let jesterSize: CGFloat = 42
-    private let tipTextInset: CGFloat = 10
+    private let tipPadding: CGFloat = 8
+    private let jesterSize: CGFloat = 28
+    private let tipTextInset: CGFloat = 6
 
     private var metricsSection: some View {
         VStack(spacing: metricsGap) {
@@ -212,40 +223,33 @@ struct TrackView: View {
                 }
             }
             .fixedSize(horizontal: false, vertical: true)
-
-            if viewModel.tipsEnabled {
-                betBiggerBanner
-                    .padding(.top, metricsGap)
-            }
         }
     }
 
     private var betBiggerBanner: some View {
-        HStack(alignment: .center, spacing: 12) {
+        HStack(alignment: .center, spacing: 6) {
             Image("Jester")
                 .resizable()
                 .scaledToFit()
                 .frame(width: jesterSize, height: jesterSize)
                 .accessibilityHidden(true)
 
-            Spacer(minLength: 8)
-
-            Text("You gotta bet bigger!")
-                .font(.system(size: 16, weight: .semibold, design: .rounded))
+            Text("Bet bigger!")
+                .font(.system(size: 11, weight: .semibold, design: .rounded))
                 .foregroundStyle(MaxwinTheme.mutedCream)
-                .multilineTextAlignment(.leading)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(tipTextInset)
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
+                .padding(.horizontal, tipTextInset)
+                .padding(.vertical, tipTextInset - 1)
                 .background(
                     MaxwinTheme.fieldFill,
-                    in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    in: RoundedRectangle(cornerRadius: 8, style: .continuous)
                 )
         }
         .padding(tipPadding)
-        .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             Color(white: 0.06),
-            in: RoundedRectangle(cornerRadius: 18, style: .continuous)
+            in: RoundedRectangle(cornerRadius: 12, style: .continuous)
         )
     }
 

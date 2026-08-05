@@ -51,6 +51,10 @@ final class SettingsViewModel {
         settingsService.updateTipsEnabled(enabled)
     }
 
+    func makeEditProfileViewModel() -> EditProfileViewModel {
+        EditProfileViewModel(authService: authService)
+    }
+
     func signOut() async {
         isSigningOut = true
         defer { isSigningOut = false }
