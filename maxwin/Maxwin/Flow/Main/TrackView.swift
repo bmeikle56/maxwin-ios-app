@@ -10,6 +10,13 @@ import SwiftUI
 struct TrackView: View {
     @Bindable var viewModel: TrackViewModel
 
+    /// 0 → 1 progress so every metric always starts at zero, then moves toward its target.
+    @State private var metricsProgress: Double = 0
+    @State private var metricsGeneration = 0
+    @State private var metricsAnimationTask: Task<Void, Never>?
+
+    private let metricsCountDuration: TimeInterval = 2.55
+
     var body: some View {
         NavigationStack {
             VStack(alignment: .leading, spacing: 20) {
@@ -32,7 +39,18 @@ struct TrackView: View {
             .onAppear {
                 Task { await viewModel.load() }
             }
+            .onChange(of: metricsAnimationKey) { _, _ in
+                animateMetrics()
+            }
         }
+    }
+
+    /// Re-triggers the count-up when range or underlying stats change.
+    private var metricsAnimationKey: String {
+        let bb = viewModel.averageBBPer100.map(String.init(describing:)) ?? "nil"
+        let minutes = viewModel.averageSessionMinutes.map(String.init) ?? "nil"
+        let winRate = viewModel.sessionWinRate.map(String.init(describing:)) ?? "nil"
+        return "\(viewModel.selectedRange.rawValue)|\(bb)|\(minutes)|\(winRate)|\(viewModel.isLoading)"
     }
 
     private var rangePicker: some View {
@@ -142,30 +160,47 @@ struct TrackView: View {
             horizontalMetricsDivider
 
             HStack(spacing: 0) {
-                statTile(
-                    title: "Avg BB/100",
-                    value: formattedBBPer100,
-                    valueColor: bbPer100Color
-                )
+                statTile(title: "Avg BB/100") {
+                    if let target = viewModel.averageBBPer100 {
+                        AnimatedBBPer100Text(value: target * metricsProgress)
+                            .id("bb-\(metricsGeneration)")
+                    } else {
+                        placeholderMetric
+                    }
+                }
 
                 verticalMetricsDivider
 
-                statTile(
-                    title: "Avg length",
-                    value: formattedAverageLength,
-                    valueColor: MaxwinTheme.cream
-                )
+                statTile(title: "Avg length") {
+                    if let target = viewModel.averageSessionMinutes {
+                        AnimatedDurationText(minutes: Double(target) * metricsProgress)
+                            .id("duration-\(metricsGeneration)")
+                    } else {
+                        placeholderMetric
+                    }
+                }
 
                 verticalMetricsDivider
 
-                statTile(
-                    title: "Win rate",
-                    value: formattedWinRate,
-                    valueColor: MaxwinTheme.cream
-                )
+                statTile(title: "Win rate") {
+                    if let target = viewModel.sessionWinRate {
+                        AnimatedWinRateText(rate: target * metricsProgress)
+                            .id("winrate-\(metricsGeneration)")
+                    } else {
+                        placeholderMetric
+                    }
+                }
             }
             .fixedSize(horizontal: false, vertical: true)
         }
+    }
+
+    private var placeholderMetric: some View {
+        Text("—")
+            .font(.system(size: 18, weight: .bold, design: .rounded))
+            .foregroundStyle(MaxwinTheme.mutedCream)
+            .minimumScaleFactor(0.8)
+            .lineLimit(1)
     }
 
     private var horizontalMetricsDivider: some View {
@@ -187,18 +222,17 @@ struct TrackView: View {
             }
     }
 
-    private func statTile(title: String, value: String, valueColor: Color) -> some View {
+    private func statTile<Content: View>(
+        title: String,
+        @ViewBuilder value: () -> Content
+    ) -> some View {
         VStack(spacing: 6) {
             Text(title)
                 .font(.system(size: 12, weight: .medium, design: .rounded))
                 .foregroundStyle(MaxwinTheme.mutedCream)
                 .multilineTextAlignment(.center)
 
-            Text(value)
-                .font(.system(size: 18, weight: .bold, design: .rounded))
-                .foregroundStyle(valueColor)
-                .minimumScaleFactor(0.8)
-                .lineLimit(1)
+            value()
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 16)
@@ -206,29 +240,229 @@ struct TrackView: View {
         .background(MaxwinTheme.panelFill, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
 
-    private var formattedBBPer100: String {
-        guard let value = viewModel.averageBBPer100 else { return "—" }
+    private func animateMetrics() {
+        guard !viewModel.isLoading else { return }
+
+        metricsAnimationTask?.cancel()
+
+        var reset = Transaction()
+        reset.disablesAnimations = true
+        withTransaction(reset) {
+            metricsProgress = 0
+            metricsGeneration += 1
+        }
+
+        guard viewModel.animationsEnabled else {
+            metricsProgress = 1
+            return
+        }
+
+        // Commit the zero frame before counting toward the target (pos or neg).
+        metricsAnimationTask = Task { @MainActor in
+            await Task.yield()
+            guard !Task.isCancelled else { return }
+            withAnimation(.easeOut(duration: metricsCountDuration)) {
+                metricsProgress = 1
+            }
+        }
+    }
+}
+
+// MARK: - Animated metric values
+
+private struct AnimatedBBPer100Text: View, Animatable {
+    var value: Double
+
+    var animatableData: Double {
+        get { value }
+        set { value = newValue }
+    }
+
+    var body: some View {
+        Text(formatted)
+            .font(.system(size: 18, weight: .bold, design: .rounded))
+            .foregroundStyle(color)
+            .minimumScaleFactor(0.8)
+            .lineLimit(1)
+    }
+
+    private var formatted: String {
         let formatted = String(format: "%.1f", abs(value))
-        if value > 0 { return "+\(formatted)" }
-        if value < 0 { return "-\(formatted)" }
+        if value > 0.05 { return "+\(formatted)" }
+        if value < -0.05 { return "-\(formatted)" }
         return "0.0"
     }
 
-    private var bbPer100Color: Color {
-        guard let value = viewModel.averageBBPer100 else { return MaxwinTheme.mutedCream }
-        if value > 0 { return MaxwinTheme.winGreen }
-        if value < 0 { return MaxwinTheme.lossRed }
+    private var color: Color {
+        if value > 0.05 { return MaxwinTheme.winGreen }
+        if value < -0.05 { return MaxwinTheme.lossRed }
         return MaxwinTheme.cream
     }
+}
 
-    private var formattedAverageLength: String {
-        guard let minutes = viewModel.averageSessionMinutes else { return "—" }
-        return PokerSession.formatDuration(minutes: minutes)
+private struct AnimatedDurationText: View, Animatable {
+    var minutes: Double
+
+    var animatableData: Double {
+        get { minutes }
+        set { minutes = newValue }
     }
 
-    private var formattedWinRate: String {
-        guard let rate = viewModel.sessionWinRate else { return "—" }
-        return "\(Int((rate * 100).rounded()))%"
+    var body: some View {
+        Text(PokerSession.formatDuration(minutes: Int(minutes.rounded())))
+            .font(.system(size: 18, weight: .bold, design: .rounded))
+            .foregroundStyle(MaxwinTheme.cream)
+            .minimumScaleFactor(0.8)
+            .lineLimit(1)
+    }
+}
+
+private struct AnimatedWinRateText: View, Animatable {
+    var rate: Double
+
+    var animatableData: Double {
+        get { rate }
+        set { rate = newValue }
+    }
+
+    /// Ramps in above ~85%, full at 100%.
+    private var fireIntensity: Double {
+        max(0, min(1, (rate - 0.85) / 0.15))
+    }
+
+    /// Ramps in below ~15%, full at 0%.
+    private var iceIntensity: Double {
+        max(0, min(1, (0.15 - rate) / 0.15))
+    }
+
+    var body: some View {
+        ZStack {
+            if fireIntensity > 0.01 {
+                WinRateFireAura(intensity: fireIntensity)
+            }
+            if iceIntensity > 0.01 {
+                WinRateIceAura(intensity: iceIntensity)
+            }
+
+            Text("\(Int((rate * 100).rounded()))%")
+                .font(.system(size: 18, weight: .bold, design: .rounded))
+                .foregroundStyle(winRateColor(for: rate))
+                .minimumScaleFactor(0.8)
+                .lineLimit(1)
+        }
+    }
+
+    /// 0–50%: very light blue → white. 51–100%: white → bright fire orange/red.
+    private func winRateColor(for rate: Double) -> Color {
+        let t = min(max(rate, 0), 1)
+        let lightBlue = (r: 0.78, g: 0.93, b: 1.0)
+        let white = (r: 1.0, g: 1.0, b: 1.0)
+        let fire = (r: 1.0, g: 0.28, b: 0.06)
+
+        if t <= 0.5 {
+            let u = t / 0.5
+            return Color(
+                red: lightBlue.r + (white.r - lightBlue.r) * u,
+                green: lightBlue.g + (white.g - lightBlue.g) * u,
+                blue: lightBlue.b + (white.b - lightBlue.b) * u
+            )
+        }
+
+        let u = (t - 0.5) / 0.5
+        return Color(
+            red: white.r + (fire.r - white.r) * u,
+            green: white.g + (fire.g - white.g) * u,
+            blue: white.b + (fire.b - white.b) * u
+        )
+    }
+}
+
+private struct WinRateFireAura: View {
+    var intensity: Double
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { context in
+            let t = context.date.timeIntervalSinceReferenceDate
+            ZStack {
+                ForEach(0..<6, id: \.self) { index in
+                    let phase = Double(index) * 0.9
+                    let flicker = 0.65 + 0.35 * sin(t * (4.2 + Double(index) * 0.7) + phase)
+                    Ellipse()
+                        .fill(
+                            RadialGradient(
+                                colors: [
+                                    Color(red: 0.95, green: 0.55, blue: 0.12).opacity(0.45 * intensity * flicker),
+                                    Color(red: 0.85, green: 0.22, blue: 0.04).opacity(0.35 * intensity * flicker),
+                                    Color(red: 0.55, green: 0.06, blue: 0.01).opacity(0.18 * intensity),
+                                    Color.clear
+                                ],
+                                center: UnitPoint(
+                                    x: 0.5 + 0.08 * sin(t * 3.1 + phase),
+                                    y: 0.55 + 0.1 * cos(t * 2.4 + phase)
+                                ),
+                                startRadius: 0,
+                                endRadius: 26 + CGFloat(index) * 3
+                            )
+                        )
+                        .frame(
+                            width: 34 + CGFloat(index) * 5,
+                            height: 20 + CGFloat(index) * 3.5
+                        )
+                        .offset(
+                            x: CGFloat(sin(t * (2.8 + Double(index) * 0.45) + phase)) * (2.5 + CGFloat(index)) * intensity,
+                            y: CGFloat(cos(t * (3.4 + Double(index) * 0.35) + phase)) * (1.5 + CGFloat(index) * 0.4) * intensity
+                                - CGFloat(index) * 0.8
+                        )
+                        .blur(radius: 3.5 + CGFloat(index) * 0.8)
+                }
+            }
+        }
+        .frame(width: 64, height: 36)
+        .allowsHitTesting(false)
+    }
+}
+
+private struct WinRateIceAura: View {
+    var intensity: Double
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { context in
+            let t = context.date.timeIntervalSinceReferenceDate
+            ZStack {
+                ForEach(0..<5, id: \.self) { index in
+                    let phase = Double(index) * 1.1
+                    let shimmer = 0.7 + 0.3 * sin(t * (2.6 + Double(index) * 0.5) + phase)
+                    Ellipse()
+                        .fill(
+                            RadialGradient(
+                                colors: [
+                                    Color(red: 0.45, green: 0.72, blue: 0.92).opacity(0.4 * intensity * shimmer),
+                                    Color(red: 0.22, green: 0.48, blue: 0.78).opacity(0.28 * intensity * shimmer),
+                                    Color(red: 0.1, green: 0.28, blue: 0.55).opacity(0.14 * intensity),
+                                    Color.clear
+                                ],
+                                center: UnitPoint(
+                                    x: 0.5 + 0.06 * cos(t * 1.8 + phase),
+                                    y: 0.5 + 0.08 * sin(t * 2.1 + phase)
+                                ),
+                                startRadius: 0,
+                                endRadius: 24 + CGFloat(index) * 3
+                            )
+                        )
+                        .frame(
+                            width: 32 + CGFloat(index) * 5,
+                            height: 20 + CGFloat(index) * 3
+                        )
+                        .offset(
+                            x: CGFloat(cos(t * (1.9 + Double(index) * 0.4) + phase)) * (2 + CGFloat(index)) * intensity,
+                            y: CGFloat(sin(t * (2.2 + Double(index) * 0.35) + phase)) * (1.5 + CGFloat(index) * 0.35) * intensity
+                        )
+                        .blur(radius: 3 + CGFloat(index) * 0.7)
+                }
+            }
+        }
+        .frame(width: 64, height: 36)
+        .allowsHitTesting(false)
     }
 }
 
