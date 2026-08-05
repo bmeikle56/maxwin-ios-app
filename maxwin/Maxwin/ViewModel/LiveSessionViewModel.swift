@@ -20,8 +20,9 @@ final class LiveSessionViewModel {
     private(set) var loggedHands: [HandDraft] = []
 
     /// Current hand being tracked one at a time.
-    var position = ""
-    var holeCards = ""
+    var position: PokerPosition?
+    var holeCard1 = ""
+    var holeCard2 = ""
     var result: Double?
     var notes = ""
 
@@ -38,10 +39,18 @@ final class LiveSessionViewModel {
     }
 
     var hasCurrentHandInput: Bool {
-        !position.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            || !holeCards.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        position != nil
+            || !holeCard1.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            || !holeCard2.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             || result != nil
             || !notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    var combinedHoleCards: String {
+        [holeCard1, holeCard2]
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
     }
 
     func togglePause() {
@@ -82,7 +91,7 @@ final class LiveSessionViewModel {
         return String(format: "%02d:%02d", minutes, seconds)
     }
 
-    /// Bumps hands played and, when the current hand has input, logs it then clears the form.
+    /// Bumps hands played; saves current hand detail when present, then always clears the form.
     func incrementHandsPlayed() {
         guard !isPaused else { return }
 
@@ -90,19 +99,20 @@ final class LiveSessionViewModel {
 
         if hasCurrentHandInput {
             var hand = HandDraft.blank(handNumber: handsPlayed)
-            hand.position = position.trimmingCharacters(in: .whitespacesAndNewlines)
-            if hand.position.isEmpty { hand.position = "—" }
-            hand.holeCards = holeCards.trimmingCharacters(in: .whitespacesAndNewlines)
+            hand.position = position?.rawValue ?? "—"
+            hand.holeCards = combinedHoleCards
             hand.result = result ?? 0
             hand.notes = notes.trimmingCharacters(in: .whitespacesAndNewlines)
             loggedHands.append(hand)
-            clearCurrentHand()
         }
+
+        clearCurrentHand()
     }
 
     func clearCurrentHand() {
-        position = ""
-        holeCards = ""
+        position = nil
+        holeCard1 = ""
+        holeCard2 = ""
         result = nil
         notes = ""
     }

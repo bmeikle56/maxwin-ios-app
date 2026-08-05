@@ -15,24 +15,33 @@ struct LiveSessionView: View {
     @FocusState private var focusedField: Field?
 
     private enum Field: Hashable {
-        case position, holeCards, result, notes
+        case holeCard1, holeCard2, result, notes
     }
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                ScrollView {
-                    VStack(spacing: 24) {
-                        timerSection
-                        handsPlayedSection
-                        currentHandSection
+            GeometryReader { proxy in
+                let compact = proxy.size.height < 700
+                let sectionSpacing: CGFloat = compact ? 10 : 14
+                let cardPadding: CGFloat = compact ? 12 : 14
+                let fieldPadding: CGFloat = compact ? 8 : 10
+
+                VStack(spacing: 0) {
+                    VStack(spacing: sectionSpacing) {
+                        timerSection(compact: compact, cardPadding: cardPadding)
+                        handsPlayedSection(compact: compact, cardPadding: cardPadding)
+                        currentHandSection(
+                            compact: compact,
+                            cardPadding: cardPadding,
+                            fieldPadding: fieldPadding
+                        )
                     }
                     .padding(.horizontal, 16)
-                    .padding(.top, 12)
-                    .padding(.bottom, 24)
-                }
+                    .padding(.top, compact ? 6 : 10)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
 
-                discardBar
+                    discardBar(compact: compact)
+                }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .feltScreenBackground()
@@ -62,13 +71,13 @@ struct LiveSessionView: View {
         }
     }
 
-    private var timerSection: some View {
-        VStack(spacing: 12) {
+    private func timerSection(compact: Bool, cardPadding: CGFloat) -> some View {
+        VStack(spacing: compact ? 6 : 10) {
             Text("Elapsed")
-                .font(.system(size: 13, weight: .medium, design: .rounded))
+                .font(.system(size: 12, weight: .medium, design: .rounded))
                 .foregroundStyle(MaxwinTheme.mutedCream)
 
-            HStack(spacing: 16) {
+            HStack(spacing: 14) {
                 Group {
                     if viewModel.isPaused {
                         Text(viewModel.formattedElapsed())
@@ -78,19 +87,19 @@ struct LiveSessionView: View {
                         }
                     }
                 }
-                .font(.system(size: 48, weight: .bold, design: .rounded))
+                .font(.system(size: compact ? 36 : 44, weight: .bold, design: .rounded))
                 .foregroundStyle(MaxwinTheme.cream)
                 .monospacedDigit()
-                .minimumScaleFactor(0.7)
+                .minimumScaleFactor(0.65)
                 .lineLimit(1)
 
                 Button {
                     viewModel.togglePause()
                 } label: {
                     Image(systemName: viewModel.isPaused ? "play.fill" : "pause.fill")
-                        .font(.system(size: 18, weight: .semibold))
+                        .font(.system(size: 16, weight: .semibold))
                         .foregroundStyle(MaxwinTheme.feltDeep)
-                        .frame(width: 44, height: 44)
+                        .frame(width: compact ? 40 : 44, height: compact ? 40 : 44)
                         .background(MaxwinTheme.gold, in: Circle())
                 }
                 .buttonStyle(.plain)
@@ -98,24 +107,24 @@ struct LiveSessionView: View {
             }
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 20)
-        .padding(.horizontal, 16)
-        .background(MaxwinTheme.panelFill, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .padding(.vertical, cardPadding)
+        .padding(.horizontal, 14)
+        .background(MaxwinTheme.panelFill, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .strokeBorder(MaxwinTheme.fieldStroke, lineWidth: 1)
         }
     }
 
-    private var handsPlayedSection: some View {
-        HStack(spacing: 16) {
-            VStack(alignment: .leading, spacing: 4) {
+    private func handsPlayedSection(compact: Bool, cardPadding: CGFloat) -> some View {
+        HStack(spacing: 14) {
+            VStack(alignment: .leading, spacing: 2) {
                 Text("Hands played")
-                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                    .font(.system(size: 12, weight: .medium, design: .rounded))
                     .foregroundStyle(MaxwinTheme.mutedCream)
 
                 Text("\(viewModel.handsPlayed)")
-                    .font(.system(size: 36, weight: .bold, design: .rounded))
+                    .font(.system(size: compact ? 28 : 34, weight: .bold, design: .rounded))
                     .foregroundStyle(MaxwinTheme.cream)
                     .monospacedDigit()
                     .contentTransition(.numericText())
@@ -129,13 +138,13 @@ struct LiveSessionView: View {
                 }
             } label: {
                 Image(systemName: "plus")
-                    .font(.system(size: 22, weight: .bold))
+                    .font(.system(size: compact ? 18 : 20, weight: .bold))
                     .foregroundStyle(
                         viewModel.isPaused
                         ? MaxwinTheme.mutedCream
                         : MaxwinTheme.feltDeep
                     )
-                    .frame(width: 56, height: 56)
+                    .frame(width: compact ? 48 : 52, height: compact ? 48 : 52)
                     .background(
                         viewModel.isPaused
                         ? MaxwinTheme.fieldStroke.opacity(0.35)
@@ -147,27 +156,73 @@ struct LiveSessionView: View {
             .disabled(viewModel.isPaused)
             .accessibilityLabel("Add hand played")
         }
-        .padding(18)
-        .background(MaxwinTheme.fieldFill, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .padding(cardPadding)
+        .background(MaxwinTheme.fieldFill, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .strokeBorder(MaxwinTheme.fieldStroke, lineWidth: 1)
         }
     }
 
-    private var currentHandSection: some View {
-        VStack(alignment: .leading, spacing: 14) {
+    private func currentHandSection(
+        compact: Bool,
+        cardPadding: CGFloat,
+        fieldPadding: CGFloat
+    ) -> some View {
+        VStack(alignment: .leading, spacing: compact ? 8 : 10) {
             Text("Current hand")
-                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                .font(.system(size: 14, weight: .semibold, design: .rounded))
                 .foregroundStyle(MaxwinTheme.gold)
 
-            Text("Track one hand at a time. Tap + to count it and clear for the next.")
-                .font(.system(size: 13, weight: .regular, design: .rounded))
-                .foregroundStyle(MaxwinTheme.mutedCream)
+            VStack(spacing: compact ? 8 : 10) {
+                HStack {
+                    Text("Position")
+                        .font(.system(size: 14, weight: .medium, design: .rounded))
+                        .foregroundStyle(MaxwinTheme.mutedCream)
 
-            VStack(spacing: 12) {
-                liveField("Position", text: $viewModel.position, field: .position)
-                liveField("Hole cards", text: $viewModel.holeCards, field: .holeCards)
+                    Spacer(minLength: 8)
+
+                    Picker("Position", selection: $viewModel.position) {
+                        Text("Select").tag(Optional<PokerPosition>.none)
+                        ForEach(PokerPosition.allCases) { position in
+                            Text(position.rawValue).tag(Optional(position))
+                        }
+                    }
+                    .labelsHidden()
+                    .tint(MaxwinTheme.cream)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, fieldPadding)
+                .background(MaxwinTheme.panelFill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+
+                HStack {
+                    Text("Hole cards")
+                        .font(.system(size: 14, weight: .medium, design: .rounded))
+                        .foregroundStyle(MaxwinTheme.mutedCream)
+
+                    Spacer(minLength: 8)
+
+                    TextField("Kd", text: $viewModel.holeCard1)
+                        .focused($focusedField, equals: .holeCard1)
+                        .multilineTextAlignment(.center)
+                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                        .foregroundStyle(MaxwinTheme.cream)
+                        .frame(width: 48)
+                        .padding(.vertical, 4)
+                        .background(MaxwinTheme.fieldFill, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+
+                    TextField("6d", text: $viewModel.holeCard2)
+                        .focused($focusedField, equals: .holeCard2)
+                        .multilineTextAlignment(.center)
+                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                        .foregroundStyle(MaxwinTheme.cream)
+                        .frame(width: 48)
+                        .padding(.vertical, 4)
+                        .background(MaxwinTheme.fieldFill, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, fieldPadding)
+                .background(MaxwinTheme.panelFill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
 
                 HStack {
                     Text("Result")
@@ -185,75 +240,58 @@ struct LiveSessionView: View {
                     .font(.system(size: 16, weight: .semibold, design: .rounded))
                     .foregroundStyle(MaxwinTheme.cream)
                 }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 12)
-                .background(MaxwinTheme.panelFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .padding(.horizontal, 12)
+                .padding(.vertical, fieldPadding)
+                .background(MaxwinTheme.panelFill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
 
-                VStack(alignment: .leading, spacing: 6) {
+                HStack {
                     Text("Notes")
                         .font(.system(size: 14, weight: .medium, design: .rounded))
                         .foregroundStyle(MaxwinTheme.mutedCream)
-                    TextField("Optional notes", text: $viewModel.notes, axis: .vertical)
+                    Spacer(minLength: 8)
+                    TextField("Optional", text: $viewModel.notes)
                         .focused($focusedField, equals: .notes)
-                        .lineLimit(2...4)
+                        .multilineTextAlignment(.trailing)
                         .font(.system(size: 16, weight: .regular, design: .rounded))
                         .foregroundStyle(MaxwinTheme.cream)
                 }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 12)
-                .background(MaxwinTheme.panelFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .padding(.horizontal, 12)
+                .padding(.vertical, fieldPadding)
+                .background(MaxwinTheme.panelFill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
             }
         }
-        .padding(18)
+        .padding(cardPadding)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(MaxwinTheme.fieldFill, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .background(MaxwinTheme.fieldFill, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .strokeBorder(MaxwinTheme.fieldStroke, lineWidth: 1)
         }
     }
 
-    private func liveField(_ title: String, text: Binding<String>, field: Field) -> some View {
-        HStack {
-            Text(title)
-                .font(.system(size: 14, weight: .medium, design: .rounded))
-                .foregroundStyle(MaxwinTheme.mutedCream)
-            Spacer(minLength: 8)
-            TextField(title, text: text)
-                .focused($focusedField, equals: field)
-                .multilineTextAlignment(.trailing)
-                .font(.system(size: 16, weight: .semibold, design: .rounded))
-                .foregroundStyle(MaxwinTheme.cream)
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 12)
-        .background(MaxwinTheme.panelFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-    }
-
-    private var discardBar: some View {
+    private func discardBar(compact: Bool) -> some View {
         Button {
             requestDiscard()
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: "trash")
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(.system(size: 14, weight: .semibold))
                 Text("Discard session")
-                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                    .font(.system(size: 15, weight: .semibold, design: .rounded))
             }
             .foregroundStyle(MaxwinTheme.lossRed)
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 16)
-            .background(MaxwinTheme.panelFill, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .padding(.vertical, compact ? 12 : 14)
+            .background(MaxwinTheme.panelFill, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
             .overlay {
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
                     .strokeBorder(MaxwinTheme.lossRed.opacity(0.35), lineWidth: 1)
             }
         }
         .buttonStyle(.plain)
         .padding(.horizontal, 16)
-        .padding(.top, 10)
-        .padding(.bottom, 12)
-        .background(MaxwinTheme.felt.opacity(0.92))
+        .padding(.top, compact ? 8 : 10)
+        .padding(.bottom, compact ? 8 : 10)
     }
 
     private func requestDiscard() {
