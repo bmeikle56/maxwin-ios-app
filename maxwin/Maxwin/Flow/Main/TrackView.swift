@@ -113,16 +113,10 @@ struct TrackView: View {
     }
 
     private var summaryHeader: some View {
-        HStack(alignment: .top, spacing: 12) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Cumulative winnings")
-                    .font(.system(size: 13, weight: .medium, design: .rounded))
-                    .foregroundStyle(MaxwinTheme.headerGray)
-
-                Text(CurrencyFormatting.signedString(from: viewModel.totalProfit))
-                    .font(.system(size: 34, weight: .bold, design: .serif))
-                    .foregroundStyle(MaxwinTheme.headerGray)
-            }
+        HStack(alignment: .firstTextBaseline, spacing: 12) {
+            Text(CurrencyFormatting.signedString(from: viewModel.totalProfit))
+                .font(.system(size: 34, weight: .bold, design: .serif))
+                .foregroundStyle(MaxwinTheme.headerGray)
 
             Spacer(minLength: 8)
 
@@ -181,6 +175,9 @@ struct TrackView: View {
 
     /// Shared gap: chart↔stats and cell↔cell.
     private let metricsGap: CGFloat = 16
+    private let tipPadding: CGFloat = 14
+    private let jesterSize: CGFloat = 42
+    private let tipTextInset: CGFloat = 10
 
     private var metricsSection: some View {
         VStack(spacing: metricsGap) {
@@ -226,22 +223,27 @@ struct TrackView: View {
             Image("Jester")
                 .resizable()
                 .scaledToFit()
-                .frame(width: 34, height: 34)
+                .frame(width: jesterSize, height: jesterSize)
                 .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
                 .accessibilityHidden(true)
+
+            Spacer(minLength: 8)
 
             Text("You gotta bet bigger!")
                 .font(.system(size: 16, weight: .semibold, design: .rounded))
                 .foregroundStyle(MaxwinTheme.mutedCream)
                 .multilineTextAlignment(.leading)
-                .frame(maxWidth: .infinity, alignment: .leading)
                 .fixedSize(horizontal: false, vertical: true)
+                .padding(tipTextInset)
+                .background(
+                    MaxwinTheme.fieldFill,
+                    in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+                )
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 12)
+        .padding(tipPadding)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
-            Color(white: 0.18).opacity(0.35),
+            Color(white: 0.18),
             in: RoundedRectangle(cornerRadius: 18, style: .continuous)
         )
     }
