@@ -14,28 +14,22 @@ struct SessionEditorView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                MaxwinTheme.felt
-                    .ignoresSafeArea()
+            Form {
+                sessionSection
+                handsSection
 
-                Form {
-                    sessionSection
-                    handsSection
-
-                    if let errorMessage = viewModel.errorMessage {
-                        Section {
-                            Text(errorMessage)
-                                .font(.system(size: 13, weight: .medium, design: .rounded))
-                                .foregroundStyle(MaxwinTheme.lossRed)
-                        }
+                if let errorMessage = viewModel.errorMessage {
+                    Section {
+                        Text(errorMessage)
+                            .font(.system(size: 13, weight: .medium, design: .rounded))
+                            .foregroundStyle(MaxwinTheme.lossRed)
                     }
                 }
-                .scrollContentBackground(.hidden)
             }
+            .scrollContentBackground(.hidden)
+            .feltScreenBackground()
             .navigationTitle(viewModel.title)
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(MaxwinTheme.feltDeep.opacity(0.95), for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }

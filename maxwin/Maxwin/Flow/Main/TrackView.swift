@@ -12,29 +12,24 @@ struct TrackView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                MaxwinTheme.felt
-                    .ignoresSafeArea()
+            VStack(alignment: .leading, spacing: 20) {
+                rangePicker
 
-                VStack(alignment: .leading, spacing: 20) {
-                    rangePicker
-
-                    if viewModel.isLoading {
-                        loadingContent
-                    } else {
-                        summaryHeader
-                        chartCard
-                        statsCard
-                    }
-
-                    Spacer(minLength: 0)
+                if viewModel.isLoading {
+                    loadingContent
+                } else {
+                    summaryHeader
+                    chartCard
+                    statsCard
                 }
-                .padding(.horizontal, 16)
-                .padding(.top, 8)
+
+                Spacer(minLength: 0)
             }
+            .padding(.horizontal, 16)
+            .padding(.top, 8)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .feltScreenBackground()
             .navigationTitle("Track")
-            .toolbarBackground(MaxwinTheme.feltDeep.opacity(0.9), for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
             .onAppear {
                 Task { await viewModel.load() }
             }
@@ -106,7 +101,7 @@ struct TrackView: View {
         }
         .frame(maxWidth: .infinity, minHeight: 320)
         .padding(16)
-        .background(Color.black.opacity(0.28), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .background(MaxwinTheme.panelFill, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .strokeBorder(MaxwinTheme.fieldStroke, lineWidth: 1)
@@ -137,7 +132,7 @@ struct TrackView: View {
         }
         .padding(12)
         .frame(maxWidth: .infinity)
-        .background(Color.black.opacity(0.28), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .background(MaxwinTheme.panelFill, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .strokeBorder(MaxwinTheme.fieldStroke, lineWidth: 1)
@@ -182,7 +177,7 @@ struct TrackView: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, 16)
         .padding(.horizontal, 8)
-        .background(Color.black.opacity(0.28), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .background(MaxwinTheme.panelFill, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .strokeBorder(MaxwinTheme.fieldStroke, lineWidth: 1)
