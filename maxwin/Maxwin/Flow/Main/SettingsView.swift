@@ -57,11 +57,11 @@ struct SettingsView: View {
         HStack(spacing: 14) {
             ZStack {
                 Circle()
-                    .fill(MaxwinTheme.gold.opacity(0.2))
+                    .fill(MaxwinTheme.cream.opacity(0.2))
                     .frame(width: 56, height: 56)
                 Image(systemName: "person.fill")
                     .font(.system(size: 22, weight: .semibold))
-                    .foregroundStyle(MaxwinTheme.gold)
+                    .foregroundStyle(MaxwinTheme.cream)
             }
 
             VStack(alignment: .leading, spacing: 4) {
@@ -94,22 +94,17 @@ struct SettingsView: View {
                     onAnimationPreferenceChanged?()
                 }
             )) {
-                Label {
-                    Text("Animations")
-                        .font(.system(size: 16, weight: .medium, design: .rounded))
-                        .foregroundStyle(MaxwinTheme.cream)
-                } icon: {
-                    Image(systemName: "sparkles")
-                        .foregroundStyle(MaxwinTheme.gold)
-                }
+                Text("Animations")
+                    .font(.system(size: 16, weight: .medium, design: .rounded))
+                    .foregroundStyle(MaxwinTheme.cream)
             }
-            .tint(MaxwinTheme.gold)
+            .tint(Color.white.opacity(0.45))
             .padding(.horizontal, 16)
             .padding(.vertical, 14)
 
             Divider()
                 .background(MaxwinTheme.fieldStroke)
-                .padding(.leading, 52)
+                .padding(.leading, 16)
 
             Toggle(isOn: Binding(
                 get: { viewModel.showYAxisLabels },
@@ -118,16 +113,11 @@ struct SettingsView: View {
                     onAnimationPreferenceChanged?()
                 }
             )) {
-                Label {
-                    Text("Y-axis labels")
-                        .font(.system(size: 16, weight: .medium, design: .rounded))
-                        .foregroundStyle(MaxwinTheme.cream)
-                } icon: {
-                    Image(systemName: "arrow.up.and.down")
-                        .foregroundStyle(MaxwinTheme.gold)
-                }
+                Text("Y-axis labels")
+                    .font(.system(size: 16, weight: .medium, design: .rounded))
+                    .foregroundStyle(MaxwinTheme.cream)
             }
-            .tint(MaxwinTheme.gold)
+            .tint(Color.white.opacity(0.45))
             .padding(.horizontal, 16)
             .padding(.vertical, 14)
         }

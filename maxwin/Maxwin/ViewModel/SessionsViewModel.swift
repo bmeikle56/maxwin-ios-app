@@ -12,6 +12,8 @@ import Observation
 @MainActor
 final class SessionsViewModel {
     var sessions: [PokerSession] = []
+    var searchText = ""
+    var showFavoritesOnly = false
     var isLoading = false
     var isMutating = false
     var errorMessage: String?
@@ -30,6 +32,15 @@ final class SessionsViewModel {
             if !newValue {
                 editorViewModel = nil
             }
+        }
+    }
+
+    var filteredSessions: [PokerSession] {
+        sessions.filter { session in
+            if showFavoritesOnly && !session.isFavorite {
+                return false
+            }
+            return matchesSearch(session)
         }
     }
 
@@ -81,5 +92,40 @@ final class SessionsViewModel {
         } catch {
             errorMessage = "Couldn't delete session. Try again."
         }
+    }
+
+    func toggleSessionFavorite(_ session: PokerSession) async {
+        var updated = session
+        updated.isFavorite.toggle()
+        await persistSession(updated)
+    }
+
+    private func persistSession(_ session: PokerSession) async {
+        isMutating = true
+        defer { isMutating = false }
+
+        do {
+            let saved = try await sessionService.updateSession(session)
+            if let index = sessions.firstIndex(where: { $0.id == saved.id }) {
+                sessions[index] = saved
+            }
+        } catch {
+            errorMessage = "Couldn't update favorite. Try again."
+        }
+    }
+
+    private func matchesSearch(_ session: PokerSession) -> Bool {
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else { return true }
+
+        let haystacks: [String] = [
+            session.venue,
+            session.stakes,
+            session.gameType.rawValue
+        ] + session.hands.flatMap { hand in
+            [hand.holeCards, hand.position, hand.notes ?? ""]
+        }
+
+        return haystacks.contains { $0.localizedCaseInsensitiveContains(query) }
     }
 }

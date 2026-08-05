@@ -172,7 +172,7 @@ struct SessionEditorView: View {
                     .lineLimit(2...4)
 
                 Toggle("Include hand detail", isOn: hand.includeDetail)
-                    .tint(MaxwinTheme.gold)
+                    .tint(Color.white.opacity(0.45))
 
                 if hand.wrappedValue.includeDetail {
                     TextField("Board", text: hand.board)

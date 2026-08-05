@@ -22,6 +22,7 @@ struct PokerSession: Identifiable, Equatable, Codable, Sendable {
     let buyIn: Double
     let cashOut: Double
     let hands: [Hand]
+    var isFavorite: Bool = false
 
     var profit: Double { cashOut - buyIn }
 

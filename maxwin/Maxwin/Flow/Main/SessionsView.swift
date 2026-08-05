@@ -34,6 +34,8 @@ struct SessionsView: View {
                             .padding()
                     } else if viewModel.sessions.isEmpty {
                         emptyState
+                    } else if viewModel.filteredSessions.isEmpty {
+                        filteredEmptyState
                     } else {
                         sessionsList
                     }
@@ -42,14 +44,26 @@ struct SessionsView: View {
             .navigationTitle("Sessions")
             .toolbarBackground(MaxwinTheme.feltDeep.opacity(0.9), for: .navigationBar)
             .toolbarColorScheme(.dark, for: .navigationBar)
+            .searchable(text: $viewModel.searchText, prompt: "Venue, stakes, cards…")
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        viewModel.showFavoritesOnly.toggle()
+                    } label: {
+                        Image(systemName: viewModel.showFavoritesOnly ? "star.fill" : "star")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(MaxwinTheme.cream)
+                    }
+                    .accessibilityLabel(viewModel.showFavoritesOnly ? "Show all sessions" : "Show favorites only")
+                }
+
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         viewModel.beginCreateSession()
                     } label: {
                         Image(systemName: "plus")
                             .font(.system(size: 16, weight: .semibold))
-                            .foregroundStyle(MaxwinTheme.gold)
+                            .foregroundStyle(MaxwinTheme.cream)
                     }
                 }
             }
@@ -124,6 +138,40 @@ struct SessionsView: View {
         .padding()
     }
 
+    private var filteredEmptyState: some View {
+        VStack(spacing: 12) {
+            Image(systemName: viewModel.showFavoritesOnly ? "star" : "magnifyingglass")
+                .font(.system(size: 36, weight: .semibold))
+                .foregroundStyle(MaxwinTheme.gold)
+            Text(viewModel.showFavoritesOnly ? "No favorites yet" : "No matching sessions")
+                .font(.system(size: 20, weight: .bold, design: .serif))
+                .foregroundStyle(MaxwinTheme.cream)
+            Text(
+                viewModel.showFavoritesOnly
+                ? "Star a session to pin it here."
+                : "Try a different venue, stakes, or hole cards."
+            )
+            .font(.system(size: 14, weight: .medium, design: .rounded))
+            .foregroundStyle(MaxwinTheme.mutedCream)
+            .multilineTextAlignment(.center)
+
+            if viewModel.showFavoritesOnly {
+                Button {
+                    viewModel.showFavoritesOnly = false
+                } label: {
+                    Text("Show all sessions")
+                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                        .foregroundStyle(MaxwinTheme.feltDeep)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 12)
+                        .background(MaxwinTheme.gold, in: Capsule())
+                }
+                .padding(.top, 4)
+            }
+        }
+        .padding()
+    }
+
     private var sessionsList: some View {
         ScrollView {
             LazyVStack(spacing: 12) {
@@ -134,7 +182,7 @@ struct SessionsView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
 
-                ForEach(viewModel.sessions) { session in
+                ForEach(viewModel.filteredSessions) { session in
                     NavigationLink(value: session.id) {
                         sessionCard(session)
                     }
@@ -178,7 +226,10 @@ struct SessionsView: View {
         .background(MaxwinTheme.fieldFill, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .strokeBorder(MaxwinTheme.fieldStroke, lineWidth: 1)
+                .strokeBorder(
+                    session.isFavorite ? MaxwinTheme.gold.opacity(0.45) : MaxwinTheme.fieldStroke,
+                    lineWidth: 1
+                )
         }
     }
 }

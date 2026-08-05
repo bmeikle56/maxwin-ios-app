@@ -35,7 +35,7 @@ struct MainTabView: View {
             }
             .tag(MainTab.settings)
         }
-        .tint(MaxwinTheme.gold)
+        .tint(MaxwinTheme.cream)
         .toolbarBackground(MaxwinTheme.feltDeep, for: .tabBar)
         .toolbarBackground(.visible, for: .tabBar)
         .toolbarColorScheme(.dark, for: .tabBar)

@@ -34,6 +34,10 @@ struct SessionDetailView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 20) {
                         summaryCard(session)
+
+                        Divider()
+                            .background(MaxwinTheme.fieldStroke)
+
                         handsSection(session)
                     }
                     .padding(.horizontal, 16)
@@ -50,7 +54,19 @@ struct SessionDetailView: View {
         .toolbarBackground(MaxwinTheme.feltDeep.opacity(0.9), for: .navigationBar)
         .toolbarColorScheme(.dark, for: .navigationBar)
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
+            ToolbarItemGroup(placement: .topBarTrailing) {
+                if let session {
+                    Button {
+                        Task { await viewModel.toggleSessionFavorite(session) }
+                    } label: {
+                        Image(systemName: session.isFavorite ? "star.fill" : "star")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(MaxwinTheme.gold)
+                    }
+                    .disabled(viewModel.isMutating)
+                    .accessibilityLabel(session.isFavorite ? "Remove from favorites" : "Add to favorites")
+                }
+
                 Menu {
                     Button {
                         if let session {

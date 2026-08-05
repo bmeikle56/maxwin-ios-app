@@ -17,6 +17,7 @@ struct SessionDraft: Equatable {
     var buyIn: Double
     var cashOut: Double
     var hands: [HandDraft]
+    var isFavorite: Bool
 
     var isEditing: Bool { id != nil }
 
@@ -30,7 +31,8 @@ struct SessionDraft: Equatable {
             durationMinutes: 120,
             buyIn: 0,
             cashOut: 0,
-            hands: []
+            hands: [],
+            isFavorite: false
         )
     }
 
@@ -44,6 +46,7 @@ struct SessionDraft: Equatable {
         buyIn = session.buyIn
         cashOut = session.cashOut
         hands = session.hands.map(HandDraft.init(hand:))
+        isFavorite = session.isFavorite
     }
 
     init(
@@ -55,7 +58,8 @@ struct SessionDraft: Equatable {
         durationMinutes: Int,
         buyIn: Double,
         cashOut: Double,
-        hands: [HandDraft]
+        hands: [HandDraft],
+        isFavorite: Bool = false
     ) {
         self.id = id
         self.date = date
@@ -66,6 +70,7 @@ struct SessionDraft: Equatable {
         self.buyIn = buyIn
         self.cashOut = cashOut
         self.hands = hands
+        self.isFavorite = isFavorite
     }
 
     func makeSession() -> PokerSession {
@@ -80,7 +85,8 @@ struct SessionDraft: Equatable {
             cashOut: cashOut,
             hands: hands.enumerated().map { index, draft in
                 draft.makeHand(fallbackNumber: index + 1)
-            }
+            },
+            isFavorite: isFavorite
         )
     }
 }
