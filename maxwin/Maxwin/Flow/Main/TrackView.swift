@@ -9,6 +9,7 @@ import SwiftUI
 
 struct TrackView: View {
     @Bindable var viewModel: TrackViewModel
+    var isSelected: Bool = true
 
     /// 0 → 1 progress so every metric always starts at zero, then moves toward its target.
     @State private var metricsProgress: Double = 0
@@ -37,7 +38,11 @@ struct TrackView: View {
             .feltScreenBackground()
             .navigationTitle("Track")
             .onAppear {
-                Task { await viewModel.load() }
+                Task { await appearOnTrackTab() }
+            }
+            .onChange(of: isSelected) { _, selected in
+                guard selected else { return }
+                Task { await appearOnTrackTab() }
             }
             .onChange(of: metricsAnimationKey) { _, _ in
                 animateMetrics()
@@ -53,11 +58,16 @@ struct TrackView: View {
         return "\(viewModel.selectedRange.rawValue)|\(bb)|\(minutes)|\(winRate)|\(viewModel.isLoading)"
     }
 
+    private func appearOnTrackTab() async {
+        await viewModel.load()
+        animateMetrics()
+    }
+
     private var rangePicker: some View {
         HStack(spacing: 6) {
             ForEach(DateRangeFilter.allCases) { range in
                 Button {
-                    Task { await viewModel.selectRange(range) }
+                    viewModel.selectRange(range)
                 } label: {
                     Text(range.rawValue)
                         .font(.system(size: 12, weight: .semibold, design: .rounded))
@@ -175,7 +185,10 @@ struct TrackView: View {
             HStack(spacing: 0) {
                 statTile(title: "Avg BB/100") {
                     if let target = viewModel.averageBBPer100 {
-                        AnimatedBBPer100Text(value: target * metricsProgress)
+                        AnimatedBBPer100Text(
+                            value: target * metricsProgress,
+                            animationsEnabled: viewModel.animationsEnabled
+                        )
                             .id("bb-\(metricsGeneration)")
                     } else {
                         placeholderMetric
@@ -197,7 +210,10 @@ struct TrackView: View {
 
                 statTile(title: "Win rate") {
                     if let target = viewModel.sessionWinRate {
-                        AnimatedWinRateText(rate: target * metricsProgress)
+                        AnimatedWinRateText(
+                            rate: target * metricsProgress,
+                            animationsEnabled: viewModel.animationsEnabled
+                        )
                             .id("winrate-\(metricsGeneration)")
                     } else {
                         placeholderMetric
@@ -286,6 +302,7 @@ struct TrackView: View {
 
 private struct AnimatedBBPer100Text: View, Animatable {
     var value: Double
+    var animationsEnabled: Bool = true
 
     var animatableData: Double {
         get { value }
@@ -314,18 +331,20 @@ private struct AnimatedBBPer100Text: View, Animatable {
             .minimumScaleFactor(0.8)
             .lineLimit(1)
             .background {
-                GeometryReader { proxy in
-                    let width = max(proxy.size.width * 1.85, 72)
-                    let height = max(proxy.size.height * 2.4, 40)
-                    ZStack {
-                        if fireIntensity > 0.01 {
-                            WinRateFireAura(intensity: fireIntensity, width: width, height: height)
+                if animationsEnabled {
+                    GeometryReader { proxy in
+                        let width = max(proxy.size.width * 1.85, 72)
+                        let height = max(proxy.size.height * 2.4, 40)
+                        ZStack {
+                            if fireIntensity > 0.01 {
+                                WinRateFireAura(intensity: fireIntensity, width: width, height: height)
+                            }
+                            if iceIntensity > 0.01 {
+                                WinRateIceAura(intensity: iceIntensity, width: width, height: height)
+                            }
                         }
-                        if iceIntensity > 0.01 {
-                            WinRateIceAura(intensity: iceIntensity, width: width, height: height)
-                        }
+                        .frame(width: proxy.size.width, height: proxy.size.height)
                     }
-                    .frame(width: proxy.size.width, height: proxy.size.height)
                 }
             }
     }
@@ -377,6 +396,7 @@ private struct AnimatedDurationText: View, Animatable {
 
 private struct AnimatedWinRateText: View, Animatable {
     var rate: Double
+    var animationsEnabled: Bool = true
 
     var animatableData: Double {
         get { rate }
@@ -395,11 +415,13 @@ private struct AnimatedWinRateText: View, Animatable {
 
     var body: some View {
         ZStack {
-            if fireIntensity > 0.01 {
-                WinRateFireAura(intensity: fireIntensity)
-            }
-            if iceIntensity > 0.01 {
-                WinRateIceAura(intensity: iceIntensity)
+            if animationsEnabled {
+                if fireIntensity > 0.01 {
+                    WinRateFireAura(intensity: fireIntensity)
+                }
+                if iceIntensity > 0.01 {
+                    WinRateIceAura(intensity: iceIntensity)
+                }
             }
 
             Text("\(Int((rate * 100).rounded()))")
@@ -537,8 +559,7 @@ private struct WinRateIceAura: View {
 #Preview {
     TrackView(
         viewModel: TrackViewModel(
-            earningsService: MockEarningsService(sessionService: MockSessionService()),
-            sessionService: MockSessionService()
+            trackDataService: MockTrackDataService(sessionService: MockSessionService())
         )
     )
 }

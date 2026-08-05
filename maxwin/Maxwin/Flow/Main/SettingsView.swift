@@ -187,7 +187,8 @@ struct SettingsView: View {
     SettingsView(
         viewModel: SettingsViewModel(
             authService: MockAuthService(),
-            settingsService: MockSettingsService()
+            settingsService: MockSettingsService(),
+            trackDataService: MockTrackDataService(sessionService: MockSessionService())
         )
     )
 }

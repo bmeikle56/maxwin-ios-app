@@ -18,7 +18,10 @@ struct MainTabView: View {
                 }
                 .tag(MainTab.sessions)
 
-            TrackView(viewModel: viewModel.trackViewModel)
+            TrackView(
+                viewModel: viewModel.trackViewModel,
+                isSelected: viewModel.selectedTab == .track
+            )
                 .tabItem {
                     Label("Track", systemImage: "chart.xyaxis.line")
                 }
@@ -47,7 +50,7 @@ struct MainTabView: View {
         viewModel: MainTabViewModel(
             authService: MockAuthService(),
             sessionService: MockSessionService(),
-            earningsService: MockEarningsService(sessionService: MockSessionService()),
+            trackDataService: MockTrackDataService(sessionService: MockSessionService()),
             settingsService: MockSettingsService()
         )
     )

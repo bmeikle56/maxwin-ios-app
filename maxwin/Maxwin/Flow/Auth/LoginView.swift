@@ -175,5 +175,10 @@ struct LoginView: View {
 }
 
 #Preview {
-    LoginView(viewModel: LoginViewModel(authService: MockAuthService()))
+    LoginView(
+        viewModel: LoginViewModel(
+            authService: MockAuthService(),
+            trackDataService: MockTrackDataService(sessionService: MockSessionService())
+        )
+    )
 }
