@@ -11,8 +11,10 @@ struct MainTabView: View {
     @Bindable var viewModel: MainTabViewModel
 
     var body: some View {
+        @Bindable var sessionsViewModel = viewModel.sessionsViewModel
+
         TabView(selection: $viewModel.selectedTab) {
-            SessionsView(viewModel: viewModel.sessionsViewModel)
+            SessionsView(viewModel: sessionsViewModel)
                 .tabItem {
                     Label("Sessions", systemImage: "list.bullet.rectangle")
                 }
@@ -20,6 +22,7 @@ struct MainTabView: View {
 
             TrackView(
                 viewModel: viewModel.trackViewModel,
+                sessionsViewModel: sessionsViewModel,
                 isSelected: viewModel.selectedTab == .track
             )
                 .tabItem {
@@ -42,6 +45,26 @@ struct MainTabView: View {
         .toolbarBackground(MaxwinTheme.feltDeep, for: .tabBar)
         .toolbarBackground(.visible, for: .tabBar)
         .toolbarColorScheme(.dark, for: .tabBar)
+        .sheet(isPresented: $sessionsViewModel.isEditorPresented) {
+            if let editorViewModel = sessionsViewModel.editorViewModel {
+                SessionEditorView(viewModel: editorViewModel) {
+                    await sessionsViewModel.handleEditorSaved()
+                }
+            }
+        }
+        .fullScreenCover(isPresented: $sessionsViewModel.isLiveSessionPresented) {
+            if let liveSessionViewModel = sessionsViewModel.liveSessionViewModel {
+                LiveSessionView(
+                    viewModel: liveSessionViewModel,
+                    onSave: {
+                        await sessionsViewModel.saveLiveSession()
+                    },
+                    onDiscard: {
+                        sessionsViewModel.discardLiveSession()
+                    }
+                )
+            }
+        }
     }
 }
 

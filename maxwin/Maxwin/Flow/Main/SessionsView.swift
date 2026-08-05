@@ -80,26 +80,6 @@ struct SessionsView: View {
             .refreshable {
                 await viewModel.load()
             }
-            .sheet(isPresented: $viewModel.isEditorPresented) {
-                if let editorViewModel = viewModel.editorViewModel {
-                    SessionEditorView(viewModel: editorViewModel) {
-                        await viewModel.handleEditorSaved()
-                    }
-                }
-            }
-            .fullScreenCover(isPresented: $viewModel.isLiveSessionPresented) {
-                if let liveSessionViewModel = viewModel.liveSessionViewModel {
-                    LiveSessionView(
-                        viewModel: liveSessionViewModel,
-                        onSave: {
-                            await viewModel.saveLiveSession()
-                        },
-                        onDiscard: {
-                            viewModel.discardLiveSession()
-                        }
-                    )
-                }
-            }
             .confirmationDialog(
                 "Delete session?",
                 isPresented: Binding(

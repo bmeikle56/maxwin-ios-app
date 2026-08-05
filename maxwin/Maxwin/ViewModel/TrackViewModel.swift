@@ -28,11 +28,6 @@ final class TrackViewModel {
         sessionsInRange.reduce(0) { $0 + $1.durationMinutes }
     }
 
-    /// Whole hours played in the selected range.
-    var totalHoursPlayed: Int {
-        Int((Double(totalMinutesPlayed) / 60.0).rounded())
-    }
-
     /// Average big blinds won per 100 hands across cash sessions with parseable stakes.
     /// Uses session profit (not notable-hand results) and estimates hands from duration.
     var averageBBPer100: Double? {
@@ -63,12 +58,6 @@ final class TrackViewModel {
             return 30
         }
         return 60
-    }
-
-    var averageSessionMinutes: Int? {
-        guard !sessionsInRange.isEmpty else { return nil }
-        let total = sessionsInRange.reduce(0) { $0 + $1.durationMinutes }
-        return Int((Double(total) / Double(sessionsInRange.count)).rounded())
     }
 
     /// Share of sessions that finished at or above break-even.

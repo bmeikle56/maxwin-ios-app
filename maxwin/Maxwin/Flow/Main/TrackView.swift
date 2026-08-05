@@ -9,6 +9,7 @@ import SwiftUI
 
 struct TrackView: View {
     @Bindable var viewModel: TrackViewModel
+    @Bindable var sessionsViewModel: SessionsViewModel
     var isSelected: Bool = true
 
     /// 0 → 1 progress so every metric always starts at zero, then moves toward its target.
@@ -32,10 +33,13 @@ struct TrackView: View {
                         metricsSection
                     }
 
+                    quickActionsSection
+
                     Spacer(minLength: 0)
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 8)
+                .padding(.bottom, 8)
 
                 if showingBBPer100Info {
                     bbPer100InfoOverlay
@@ -62,7 +66,7 @@ struct TrackView: View {
     /// Re-triggers the count-up when range or underlying stats change.
     private var metricsAnimationKey: String {
         let bb = viewModel.averageBBPer100.map(String.init(describing:)) ?? "nil"
-        let minutes = viewModel.averageSessionMinutes.map(String.init) ?? "nil"
+        let minutes = String(viewModel.totalMinutesPlayed)
         let winRate = viewModel.sessionWinRate.map(String.init(describing:)) ?? "nil"
         return "\(viewModel.selectedRange.rawValue)|\(bb)|\(minutes)|\(winRate)|\(viewModel.isLoading)"
     }
@@ -114,21 +118,9 @@ struct TrackView: View {
 
     private var summaryHeader: some View {
         HStack(alignment: .center, spacing: 12) {
-            HStack(alignment: .center, spacing: 8) {
-                Text(CurrencyFormatting.signedString(from: viewModel.totalProfit))
-                    .font(.system(size: 34, weight: .bold, design: .serif))
-                    .foregroundStyle(MaxwinTheme.headerGray)
-
-                Capsule()
-                    .fill(MaxwinTheme.headerGray.opacity(0.4))
-                    .frame(width: 1, height: 18)
-
-                Text(hoursPlayedLabel)
-                    .font(.system(size: 13, weight: .medium, design: .rounded))
-                    .foregroundStyle(MaxwinTheme.headerGray)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-            }
+            Text(CurrencyFormatting.signedString(from: viewModel.totalProfit))
+                .font(.system(size: 34, weight: .bold, design: .serif))
+                .foregroundStyle(MaxwinTheme.headerGray)
 
             Spacer(minLength: 8)
 
@@ -136,11 +128,6 @@ struct TrackView: View {
                 betBiggerBanner
             }
         }
-    }
-
-    private var hoursPlayedLabel: String {
-        let hours = viewModel.totalHoursPlayed
-        return hours == 1 ? "1 hour" : "\(hours) hours"
     }
 
     private var loadingContent: some View {
@@ -189,6 +176,8 @@ struct TrackView: View {
     private let tipPadding: CGFloat = 8
     private let jesterSize: CGFloat = 28
     private let tipTextInset: CGFloat = 6
+    /// Translucent fill shared by quick actions and stat tiles.
+    private let translucentPanelFill = Color(white: 0.42).opacity(0.18)
 
     private var metricsSection: some View {
         VStack(spacing: metricsGap) {
@@ -204,13 +193,9 @@ struct TrackView: View {
                     }
                 }
 
-                statTile(title: "Avg length") {
-                    if let target = viewModel.averageSessionMinutes {
-                        AnimatedDurationText(minutes: Double(target) * metricsProgress)
-                            .id("duration-\(metricsGeneration)")
-                    } else {
-                        placeholderMetric
-                    }
+                statTile(title: "Play time") {
+                    AnimatedDurationText(minutes: Double(viewModel.totalMinutesPlayed) * metricsProgress)
+                        .id("duration-\(metricsGeneration)")
                 }
 
                 statTile(title: "Win rate") {
@@ -224,6 +209,62 @@ struct TrackView: View {
             }
             .fixedSize(horizontal: false, vertical: true)
         }
+    }
+
+    private let quickActionSide: CGFloat = 112
+
+    private var quickActionsSection: some View {
+        HStack(spacing: metricsGap) {
+            quickActionButton(
+                title: "Record",
+                subtitle: "Live session",
+                systemImage: "record.circle"
+            ) {
+                sessionsViewModel.beginLiveSession()
+            }
+
+            quickActionButton(
+                title: "Log",
+                subtitle: "Past session",
+                systemImage: "plus.circle"
+            ) {
+                sessionsViewModel.beginCreateSession()
+            }
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private func quickActionButton(
+        title: String,
+        subtitle: String,
+        systemImage: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            VStack(spacing: 6) {
+                Image(systemName: systemImage)
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundStyle(MaxwinTheme.cream)
+                    .symbolRenderingMode(.hierarchical)
+
+                VStack(spacing: 2) {
+                    Text(title)
+                        .font(.system(size: 14, weight: .semibold, design: .rounded))
+                        .foregroundStyle(MaxwinTheme.cream)
+
+                    Text(subtitle)
+                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                        .foregroundStyle(MaxwinTheme.mutedCream)
+                }
+            }
+            .frame(width: quickActionSide, height: quickActionSide)
+            .background(
+                translucentPanelFill,
+                in: RoundedRectangle(cornerRadius: 6, style: .continuous)
+            )
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("\(title), \(subtitle)")
     }
 
     private var betBiggerBanner: some View {
@@ -340,11 +381,11 @@ struct TrackView: View {
 
                 Spacer(minLength: 0)
             }
-            .padding(.horizontal, 8)
+            .padding(.horizontal, 4)
             .padding(.vertical, 4)
             .frame(maxWidth: .infinity)
             .background(
-                Color(white: 0.42).opacity(0.18),
+                Color(white: 0.42).opacity(0.28),
                 in: RoundedRectangle(cornerRadius: 6, style: .continuous)
             )
 
@@ -354,7 +395,7 @@ struct TrackView: View {
         .frame(maxWidth: .infinity, alignment: .top)
         .padding(.vertical, 16)
         .padding(.horizontal, 4)
-        .background(MaxwinTheme.panelFill, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .background(translucentPanelFill, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
 
     private func animateMetrics() {
@@ -494,6 +535,10 @@ private struct AnimatedWinRateText: View, Animatable {
 #Preview {
     TrackView(
         viewModel: TrackViewModel(
+            trackDataService: MockTrackDataService(sessionService: MockSessionService())
+        ),
+        sessionsViewModel: SessionsViewModel(
+            sessionService: MockSessionService(),
             trackDataService: MockTrackDataService(sessionService: MockSessionService())
         )
     )
