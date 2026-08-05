@@ -18,6 +18,8 @@ enum MaxwinTheme {
     /// Opaque darker panel used for charts and inset cards.
     static let panelFill = Color(red: 0.012, green: 0.032, blue: 0.02)
     static let fieldStroke = Color.white.opacity(0.16)
+    /// Soft green divider that sits quietly on the felt.
+    static let divider = Color(red: 0.10, green: 0.22, blue: 0.14)
     static let winGreen = Color(red: 0.35, green: 0.78, blue: 0.48)
     static let lossRed = Color(red: 0.92, green: 0.38, blue: 0.36)
 }

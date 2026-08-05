@@ -19,8 +19,7 @@ struct TrackView: View {
                     loadingContent
                 } else {
                     summaryHeader
-                    chartCard
-                    statsCard
+                    metricsSection
                 }
 
                 Spacer(minLength: 0)
@@ -53,7 +52,7 @@ struct TrackView: View {
                         .padding(.vertical, 10)
                         .background(
                             viewModel.selectedRange == range
-                            ? MaxwinTheme.gold
+                            ? MaxwinTheme.cream
                             : MaxwinTheme.fieldFill,
                             in: Capsule()
                         )
@@ -102,10 +101,6 @@ struct TrackView: View {
         .frame(maxWidth: .infinity, minHeight: 320)
         .padding(16)
         .background(MaxwinTheme.panelFill, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .strokeBorder(MaxwinTheme.fieldStroke, lineWidth: 1)
-        }
     }
 
     private var chartCard: some View {
@@ -133,32 +128,63 @@ struct TrackView: View {
         .padding(12)
         .frame(maxWidth: .infinity)
         .background(MaxwinTheme.panelFill, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .strokeBorder(MaxwinTheme.fieldStroke, lineWidth: 1)
+    }
+
+    /// Shared gap: chart↔stats and cell↔cell.
+    private let metricsGap: CGFloat = 16
+    /// Keeps vertical dividers from meeting the horizontal rule.
+    private let dividerInset: CGFloat = 14
+
+    private var metricsSection: some View {
+        VStack(spacing: 0) {
+            chartCard
+
+            horizontalMetricsDivider
+
+            HStack(spacing: 0) {
+                statTile(
+                    title: "Avg BB/100",
+                    value: formattedBBPer100,
+                    valueColor: bbPer100Color
+                )
+
+                verticalMetricsDivider
+
+                statTile(
+                    title: "Avg length",
+                    value: formattedAverageLength,
+                    valueColor: MaxwinTheme.cream
+                )
+
+                verticalMetricsDivider
+
+                statTile(
+                    title: "Win rate",
+                    value: formattedWinRate,
+                    valueColor: MaxwinTheme.cream
+                )
+            }
+            .fixedSize(horizontal: false, vertical: true)
         }
     }
 
-    private var statsCard: some View {
-        HStack(spacing: 10) {
-            statTile(
-                title: "Avg BB/100",
-                value: formattedBBPer100,
-                valueColor: bbPer100Color
-            )
+    private var horizontalMetricsDivider: some View {
+        Capsule()
+            .fill(MaxwinTheme.divider)
+            .frame(height: 1)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, (metricsGap - 1) / 2)
+    }
 
-            statTile(
-                title: "Avg length",
-                value: formattedAverageLength,
-                valueColor: MaxwinTheme.cream
-            )
-
-            statTile(
-                title: "Win rate",
-                value: formattedWinRate,
-                valueColor: MaxwinTheme.cream
-            )
-        }
+    private var verticalMetricsDivider: some View {
+        Color.clear
+            .frame(width: metricsGap)
+            .overlay {
+                Capsule()
+                    .fill(MaxwinTheme.divider)
+                    .frame(width: 1)
+                    .padding(.vertical, dividerInset)
+            }
     }
 
     private func statTile(title: String, value: String, valueColor: Color) -> some View {
@@ -176,12 +202,8 @@ struct TrackView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 16)
-        .padding(.horizontal, 8)
+        .padding(.horizontal, 4)
         .background(MaxwinTheme.panelFill, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .strokeBorder(MaxwinTheme.fieldStroke, lineWidth: 1)
-        }
     }
 
     private var formattedBBPer100: String {
