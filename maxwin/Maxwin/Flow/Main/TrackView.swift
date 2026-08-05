@@ -258,10 +258,11 @@ struct TrackView: View {
         }
 
         // Commit the zero frame before counting toward the target (pos or neg).
+        // Strong ease-out: starts quick, then decelerates hard as it nears the final value.
         metricsAnimationTask = Task { @MainActor in
             await Task.yield()
             guard !Task.isCancelled else { return }
-            withAnimation(.easeOut(duration: metricsCountDuration)) {
+            withAnimation(.timingCurve(0.05, 0.7, 0.1, 1.0, duration: metricsCountDuration)) {
                 metricsProgress = 1
             }
         }
@@ -278,25 +279,69 @@ private struct AnimatedBBPer100Text: View, Animatable {
         set { value = newValue }
     }
 
+    /// Soft-maps (−∞, ∞) → (−1, 1); ~±20 bb/100 is strongly saturated.
+    private var normalized: Double {
+        tanh(value / 20)
+    }
+
+    /// Ramps in above ~0.7 (~+17 bb/100), full as value → +∞.
+    private var fireIntensity: Double {
+        max(0, min(1, (normalized - 0.7) / 0.3))
+    }
+
+    /// Ramps in below ~−0.7 (~−17 bb/100), full as value → −∞.
+    private var iceIntensity: Double {
+        max(0, min(1, (-0.7 - normalized) / 0.3))
+    }
+
     var body: some View {
         Text(formatted)
             .font(.system(size: 18, weight: .bold, design: .rounded))
-            .foregroundStyle(color)
+            .foregroundStyle(bbPer100Color(for: normalized))
             .minimumScaleFactor(0.8)
             .lineLimit(1)
+            .background {
+                GeometryReader { proxy in
+                    let width = max(proxy.size.width * 1.85, 72)
+                    let height = max(proxy.size.height * 2.4, 40)
+                    ZStack {
+                        if fireIntensity > 0.01 {
+                            WinRateFireAura(intensity: fireIntensity, width: width, height: height)
+                        }
+                        if iceIntensity > 0.01 {
+                            WinRateIceAura(intensity: iceIntensity, width: width, height: height)
+                        }
+                    }
+                    .frame(width: proxy.size.width, height: proxy.size.height)
+                }
+            }
     }
 
     private var formatted: String {
-        let formatted = String(format: "%.1f", abs(value))
-        if value > 0.05 { return "+\(formatted)" }
-        if value < -0.05 { return "-\(formatted)" }
-        return "0.0"
+        String(format: "%.1f", value)
     }
 
-    private var color: Color {
-        if value > 0.05 { return MaxwinTheme.winGreen }
-        if value < -0.05 { return MaxwinTheme.lossRed }
-        return MaxwinTheme.cream
+    /// −1 → 0: light blue ice → white. 0 → +1: white → bright fire.
+    private func bbPer100Color(for t: Double) -> Color {
+        let clamped = min(max(t, -1), 1)
+        let lightBlue = (r: 0.78, g: 0.93, b: 1.0)
+        let white = (r: 1.0, g: 1.0, b: 1.0)
+        let fire = (r: 1.0, g: 0.28, b: 0.06)
+
+        if clamped <= 0 {
+            let u = clamped + 1 // −1 → 0, 0 → 1
+            return Color(
+                red: lightBlue.r + (white.r - lightBlue.r) * u,
+                green: lightBlue.g + (white.g - lightBlue.g) * u,
+                blue: lightBlue.b + (white.b - lightBlue.b) * u
+            )
+        }
+
+        return Color(
+            red: white.r + (fire.r - white.r) * clamped,
+            green: white.g + (fire.g - white.g) * clamped,
+            blue: white.b + (fire.b - white.b) * clamped
+        )
     }
 }
 
@@ -344,7 +389,7 @@ private struct AnimatedWinRateText: View, Animatable {
                 WinRateIceAura(intensity: iceIntensity)
             }
 
-            Text("\(Int((rate * 100).rounded()))%")
+            Text("\(Int((rate * 100).rounded()))")
                 .font(.system(size: 18, weight: .bold, design: .rounded))
                 .foregroundStyle(winRateColor(for: rate))
                 .minimumScaleFactor(0.8)
@@ -379,8 +424,13 @@ private struct AnimatedWinRateText: View, Animatable {
 
 private struct WinRateFireAura: View {
     var intensity: Double
+    var width: CGFloat = 64
+    var height: CGFloat = 36
 
     var body: some View {
+        let scaleX = width / 64
+        let scaleY = height / 36
+
         TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { context in
             let t = context.date.timeIntervalSinceReferenceDate
             ZStack {
@@ -401,31 +451,36 @@ private struct WinRateFireAura: View {
                                     y: 0.55 + 0.1 * cos(t * 2.4 + phase)
                                 ),
                                 startRadius: 0,
-                                endRadius: 26 + CGFloat(index) * 3
+                                endRadius: (26 + CGFloat(index) * 3) * max(scaleX, scaleY)
                             )
                         )
                         .frame(
-                            width: 34 + CGFloat(index) * 5,
-                            height: 20 + CGFloat(index) * 3.5
+                            width: (34 + CGFloat(index) * 5) * scaleX,
+                            height: (20 + CGFloat(index) * 3.5) * scaleY
                         )
                         .offset(
-                            x: CGFloat(sin(t * (2.8 + Double(index) * 0.45) + phase)) * (2.5 + CGFloat(index)) * intensity,
-                            y: CGFloat(cos(t * (3.4 + Double(index) * 0.35) + phase)) * (1.5 + CGFloat(index) * 0.4) * intensity
-                                - CGFloat(index) * 0.8
+                            x: CGFloat(sin(t * (2.8 + Double(index) * 0.45) + phase)) * (2.5 + CGFloat(index)) * intensity * scaleX,
+                            y: CGFloat(cos(t * (3.4 + Double(index) * 0.35) + phase)) * (1.5 + CGFloat(index) * 0.4) * intensity * scaleY
+                                - CGFloat(index) * 0.8 * scaleY
                         )
-                        .blur(radius: 3.5 + CGFloat(index) * 0.8)
+                        .blur(radius: (3.5 + CGFloat(index) * 0.8) * max(scaleX, scaleY))
                 }
             }
         }
-        .frame(width: 64, height: 36)
+        .frame(width: width, height: height)
         .allowsHitTesting(false)
     }
 }
 
 private struct WinRateIceAura: View {
     var intensity: Double
+    var width: CGFloat = 64
+    var height: CGFloat = 36
 
     var body: some View {
+        let scaleX = width / 64
+        let scaleY = height / 36
+
         TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { context in
             let t = context.date.timeIntervalSinceReferenceDate
             ZStack {
@@ -446,22 +501,22 @@ private struct WinRateIceAura: View {
                                     y: 0.5 + 0.08 * sin(t * 2.1 + phase)
                                 ),
                                 startRadius: 0,
-                                endRadius: 24 + CGFloat(index) * 3
+                                endRadius: (24 + CGFloat(index) * 3) * max(scaleX, scaleY)
                             )
                         )
                         .frame(
-                            width: 32 + CGFloat(index) * 5,
-                            height: 20 + CGFloat(index) * 3
+                            width: (32 + CGFloat(index) * 5) * scaleX,
+                            height: (20 + CGFloat(index) * 3) * scaleY
                         )
                         .offset(
-                            x: CGFloat(cos(t * (1.9 + Double(index) * 0.4) + phase)) * (2 + CGFloat(index)) * intensity,
-                            y: CGFloat(sin(t * (2.2 + Double(index) * 0.35) + phase)) * (1.5 + CGFloat(index) * 0.35) * intensity
+                            x: CGFloat(cos(t * (1.9 + Double(index) * 0.4) + phase)) * (2 + CGFloat(index)) * intensity * scaleX,
+                            y: CGFloat(sin(t * (2.2 + Double(index) * 0.35) + phase)) * (1.5 + CGFloat(index) * 0.35) * intensity * scaleY
                         )
-                        .blur(radius: 3 + CGFloat(index) * 0.7)
+                        .blur(radius: (3 + CGFloat(index) * 0.7) * max(scaleX, scaleY))
                 }
             }
         }
-        .frame(width: 64, height: 36)
+        .frame(width: width, height: height)
         .allowsHitTesting(false)
     }
 }

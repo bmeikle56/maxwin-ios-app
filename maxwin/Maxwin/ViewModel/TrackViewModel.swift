@@ -24,21 +24,36 @@ final class TrackViewModel {
         points.last?.cumulativeProfit ?? 0
     }
 
-    /// Average big blinds won per 100 hands, from logged hand results at parseable cash stakes.
+    /// Average big blinds won per 100 hands across cash sessions with parseable stakes.
+    /// Uses session profit (not notable-hand results) and estimates hands from duration.
     var averageBBPer100: Double? {
         var totalBBWon = 0.0
-        var totalHands = 0
+        var totalHands = 0.0
 
         for session in sessionsInRange {
-            guard let bigBlind = session.bigBlind, bigBlind > 0 else { continue }
-            for hand in session.hands {
-                totalBBWon += hand.result / bigBlind
-                totalHands += 1
-            }
+            guard session.gameType == .cash,
+                  let bigBlind = session.bigBlind, bigBlind > 0,
+                  session.durationMinutes > 0 else { continue }
+
+            let hours = Double(session.durationMinutes) / 60.0
+            let hands = hours * Self.estimatedHandsPerHour(for: session)
+            guard hands > 0 else { continue }
+
+            totalBBWon += session.profit / bigBlind
+            totalHands += hands
         }
 
         guard totalHands > 0 else { return nil }
-        return totalBBWon / Double(totalHands) * 100
+        return totalBBWon / totalHands * 100
+    }
+
+    /// Live slash stakes (~2/5) run slower than online NL (25NL).
+    private static func estimatedHandsPerHour(for session: PokerSession) -> Double {
+        let stakes = session.stakes
+        if stakes.range(of: #"\d+(?:\.\d+)?\s*/\s*\d+(?:\.\d+)?"#, options: .regularExpression) != nil {
+            return 30
+        }
+        return 60
     }
 
     var averageSessionMinutes: Int? {
@@ -50,7 +65,7 @@ final class TrackViewModel {
     /// Share of sessions that finished at or above break-even.
     /// Temporary mock for fire-aura testing — restore real calculation when done.
     var sessionWinRate: Double? {
-        0.98
+        0.03
 //        guard !sessionsInRange.isEmpty else { return nil }
 //        let wins = sessionsInRange.filter { $0.profit >= 0 }.count
 //        return Double(wins) / Double(sessionsInRange.count)
