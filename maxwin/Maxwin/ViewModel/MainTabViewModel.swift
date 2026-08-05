@@ -35,6 +35,7 @@ final class MainTabViewModel {
         self.sessionsViewModel = SessionsViewModel(sessionService: sessionService)
         self.trackViewModel = TrackViewModel(
             earningsService: earningsService,
+            sessionService: sessionService,
             animationsEnabled: settingsService.settings.animationsEnabled,
             showYAxisLabels: settingsService.settings.showYAxisLabels
         )

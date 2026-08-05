@@ -24,6 +24,7 @@ struct TrackView: View {
                     } else {
                         summaryHeader
                         chartCard
+                        statsCard
                     }
 
                     Spacer(minLength: 0)
@@ -142,12 +143,83 @@ struct TrackView: View {
                 .strokeBorder(MaxwinTheme.fieldStroke, lineWidth: 1)
         }
     }
+
+    private var statsCard: some View {
+        HStack(spacing: 10) {
+            statTile(
+                title: "Avg BB/100",
+                value: formattedBBPer100,
+                valueColor: bbPer100Color
+            )
+
+            statTile(
+                title: "Avg length",
+                value: formattedAverageLength,
+                valueColor: MaxwinTheme.cream
+            )
+
+            statTile(
+                title: "Win rate",
+                value: formattedWinRate,
+                valueColor: MaxwinTheme.cream
+            )
+        }
+    }
+
+    private func statTile(title: String, value: String, valueColor: Color) -> some View {
+        VStack(spacing: 6) {
+            Text(title)
+                .font(.system(size: 12, weight: .medium, design: .rounded))
+                .foregroundStyle(MaxwinTheme.mutedCream)
+                .multilineTextAlignment(.center)
+
+            Text(value)
+                .font(.system(size: 18, weight: .bold, design: .rounded))
+                .foregroundStyle(valueColor)
+                .minimumScaleFactor(0.8)
+                .lineLimit(1)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 16)
+        .padding(.horizontal, 8)
+        .background(Color.black.opacity(0.28), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .strokeBorder(MaxwinTheme.fieldStroke, lineWidth: 1)
+        }
+    }
+
+    private var formattedBBPer100: String {
+        guard let value = viewModel.averageBBPer100 else { return "—" }
+        let formatted = String(format: "%.1f", abs(value))
+        if value > 0 { return "+\(formatted)" }
+        if value < 0 { return "-\(formatted)" }
+        return "0.0"
+    }
+
+    private var bbPer100Color: Color {
+        guard let value = viewModel.averageBBPer100 else { return MaxwinTheme.mutedCream }
+        if value > 0 { return MaxwinTheme.winGreen }
+        if value < 0 { return MaxwinTheme.lossRed }
+        return MaxwinTheme.cream
+    }
+
+    private var formattedAverageLength: String {
+        guard let minutes = viewModel.averageSessionMinutes else { return "—" }
+        return PokerSession.formatDuration(minutes: minutes)
+    }
+
+    private var formattedWinRate: String {
+        guard let rate = viewModel.sessionWinRate else { return "—" }
+        return "\(Int((rate * 100).rounded()))%"
+    }
 }
 
 #Preview {
     TrackView(
         viewModel: TrackViewModel(
-            earningsService: MockEarningsService(sessionService: MockSessionService())
+            earningsService: MockEarningsService(sessionService: MockSessionService()),
+            sessionService: MockSessionService()
         )
     )
 }
