@@ -224,7 +224,6 @@ struct TrackView: View {
                 .resizable()
                 .scaledToFit()
                 .frame(width: jesterSize, height: jesterSize)
-                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
                 .accessibilityHidden(true)
 
             Spacer(minLength: 8)
@@ -243,7 +242,7 @@ struct TrackView: View {
         .padding(tipPadding)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
-            Color(white: 0.18),
+            Color(white: 0.06),
             in: RoundedRectangle(cornerRadius: 18, style: .continuous)
         )
     }
