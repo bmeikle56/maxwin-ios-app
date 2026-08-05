@@ -27,10 +27,6 @@ final class SettingsViewModel {
         settingsService.settings.animationsEnabled
     }
 
-    var showYAxisLabels: Bool {
-        settingsService.settings.showYAxisLabels
-    }
-
     init(authService: AuthServicing, settingsService: SettingsServicing) {
         self.authService = authService
         self.settingsService = settingsService
@@ -38,10 +34,6 @@ final class SettingsViewModel {
 
     func setAnimationsEnabled(_ enabled: Bool) {
         settingsService.updateAnimationsEnabled(enabled)
-    }
-
-    func setShowYAxisLabels(_ enabled: Bool) {
-        settingsService.updateShowYAxisLabels(enabled)
     }
 
     func signOut() async {

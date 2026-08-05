@@ -11,7 +11,6 @@ import Observation
 protocol SettingsServicing: AnyObject {
     var settings: AppSettings { get }
     func updateAnimationsEnabled(_ enabled: Bool)
-    func updateShowYAxisLabels(_ enabled: Bool)
 }
 
 @Observable
@@ -30,8 +29,7 @@ final class MockSettingsService: SettingsServicing {
             self.settings = decoded
         } else if userDefaults.object(forKey: legacyAnimationsKey) != nil {
             self.settings = AppSettings(
-                animationsEnabled: userDefaults.bool(forKey: legacyAnimationsKey),
-                showYAxisLabels: true
+                animationsEnabled: userDefaults.bool(forKey: legacyAnimationsKey)
             )
             persist()
         } else {
@@ -41,11 +39,6 @@ final class MockSettingsService: SettingsServicing {
 
     func updateAnimationsEnabled(_ enabled: Bool) {
         settings.animationsEnabled = enabled
-        persist()
-    }
-
-    func updateShowYAxisLabels(_ enabled: Bool) {
-        settings.showYAxisLabels = enabled
         persist()
     }
 

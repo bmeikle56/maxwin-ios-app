@@ -7,10 +7,10 @@
 
 import SwiftUI
 
-struct WinningsChartView: View {
+struct WinningsChartView: View, Animatable {
     let points: [EarningsDataPoint]
-    var animationsEnabled: Bool = true
-    var showYAxisLabels: Bool = true
+    /// 0 → 1 line-draw progress; driven by the same animation as the Track metrics.
+    var drawProgress: Double = 1
 
     private static let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -19,18 +19,26 @@ struct WinningsChartView: View {
         return formatter
     }()
 
-    private let yAxisWidth: CGFloat = 48
-    private let plotVerticalPadding: CGFloat = 8
+    private let plotVerticalPadding: CGFloat = 16
+    private let plotHorizontalPadding: CGFloat = 28
+    private let lineWidth: CGFloat = 1.5
+
+    var animatableData: Double {
+        get { drawProgress }
+        set { drawProgress = newValue }
+    }
 
     var body: some View {
         VStack(spacing: 8) {
             GeometryReader { proxy in
                 let size = proxy.size
-                let leadingInset = showYAxisLabels ? yAxisWidth : 0
-                let chartWidth = max(size.width - leadingInset, 1)
+                let chartWidth = max(size.width, 1)
+                let plotLeading = plotHorizontalPadding
+                let plotWidth = max(chartWidth - plotHorizontalPadding * 2, 1)
                 let plotTop = plotVerticalPadding
                 let plotBottom = size.height - plotVerticalPadding
                 let plotHeight = max(plotBottom - plotTop, 1)
+                let progress = max(0, min(1, drawProgress))
 
                 Canvas { context, _ in
                     guard points.count >= 1 else { return }
@@ -57,7 +65,11 @@ struct WinningsChartView: View {
 
                     let stepX = points.count == 1
                         ? 0
-                        : chartWidth / CGFloat(points.count - 1)
+                        : plotWidth / CGFloat(points.count - 1)
+
+                    let xForIndex: (Int) -> CGFloat = { index in
+                        plotLeading + CGFloat(index) * stepX
+                    }
 
                     let yForValue: (Double) -> CGFloat = { value in
                         yPosition(
@@ -71,88 +83,59 @@ struct WinningsChartView: View {
 
                     drawGuideLine(
                         at: zeroY,
-                        fromX: leadingInset,
+                        fromX: 0,
                         width: chartWidth,
                         opacity: 0.85,
                         in: &context
                     )
 
-                    if showYAxisLabels {
-                        let extremesDiffer = abs(dataMax - dataMin) > 0.000_1
+                    let extremesDiffer = abs(dataMax - dataMin) > 0.000_1
 
-                        if abs(dataMax) > 0.000_1 {
-                            let maxY = yForValue(dataMax)
-                            drawGuideLine(
-                                at: maxY,
-                                fromX: leadingInset,
-                                width: chartWidth,
-                                opacity: 0.55,
-                                in: &context
-                            )
-                            drawYAxisLabel(
-                                CurrencyFormatting.signedString(from: dataMax),
-                                at: maxY,
-                                in: &context
-                            )
-                        }
-
-                        if abs(dataMin) > 0.000_1, extremesDiffer || abs(dataMax) <= 0.000_1 {
-                            let minY = yForValue(dataMin)
-                            drawGuideLine(
-                                at: minY,
-                                fromX: leadingInset,
-                                width: chartWidth,
-                                opacity: 0.55,
-                                in: &context
-                            )
-                            drawYAxisLabel(
-                                CurrencyFormatting.signedString(from: dataMin),
-                                at: minY,
-                                in: &context
-                            )
-                        }
-
-                        drawYAxisLabel("$0", at: zeroY, in: &context)
+                    if abs(dataMax) > 0.000_1 {
+                        drawGuideLine(
+                            at: yForValue(dataMax),
+                            fromX: 0,
+                            width: chartWidth,
+                            opacity: 0.22,
+                            in: &context
+                        )
                     }
 
-                    guard points.count >= 2 else {
-                        let y = yForValue(values[0])
-                        let x = leadingInset + chartWidth / 2
-                        let dot = Path(ellipseIn: CGRect(x: x - 4, y: y - 4, width: 8, height: 8))
-                        context.fill(dot, with: .color(values[0] >= 0 ? MaxwinTheme.winGreen : MaxwinTheme.lossRed))
-                        return
+                    if abs(dataMin) > 0.000_1, extremesDiffer || abs(dataMax) <= 0.000_1 {
+                        drawGuideLine(
+                            at: yForValue(dataMin),
+                            fromX: 0,
+                            width: chartWidth,
+                            opacity: 0.22,
+                            in: &context
+                        )
                     }
 
+                    guard points.count >= 2 else { return }
+
+                    var pieces: [StrokePiece] = []
                     for index in 0..<(points.count - 1) {
                         let startValue = values[index]
                         let endValue = values[index + 1]
                         let start = CGPoint(
-                            x: leadingInset + CGFloat(index) * stepX,
+                            x: xForIndex(index),
                             y: yForValue(startValue)
                         )
                         let end = CGPoint(
-                            x: leadingInset + CGFloat(index + 1) * stepX,
+                            x: xForIndex(index + 1),
                             y: yForValue(endValue)
                         )
-
-                        drawSegment(
+                        pieces.append(contentsOf: coloredPieces(
                             from: start,
                             to: end,
                             startValue: startValue,
                             endValue: endValue,
-                            zeroY: zeroY,
-                            in: &context
-                        )
+                            zeroY: zeroY
+                        ))
                     }
+
+                    drawPieces(pieces, progress: progress, in: &context)
                 }
-                .animation(
-                    animationsEnabled ? .easeInOut(duration: 0.35) : nil,
-                    value: points.map(\.id)
-                )
-                .animation(
-                    animationsEnabled ? .easeInOut(duration: 0.25) : nil,
-                    value: showYAxisLabels
-                )
             }
 
             dateAxis
@@ -161,10 +144,6 @@ struct WinningsChartView: View {
 
     private var dateAxis: some View {
         HStack(spacing: 0) {
-            if showYAxisLabels {
-                Color.clear.frame(width: yAxisWidth)
-            }
-
             if let startDate = points.first?.date {
                 Text(Self.dateFormatter.string(from: startDate))
             }
@@ -173,6 +152,7 @@ struct WinningsChartView: View {
                 Text(Self.dateFormatter.string(from: endDate))
             }
         }
+        .padding(.horizontal, plotHorizontalPadding)
         .font(.system(size: 12, weight: .medium, design: .rounded))
         .foregroundStyle(MaxwinTheme.cream.opacity(0.8))
     }
@@ -205,41 +185,32 @@ struct WinningsChartView: View {
         )
     }
 
-    private func drawYAxisLabel(
-        _ text: String,
-        at y: CGFloat,
-        in context: inout GraphicsContext
-    ) {
-        let resolved = context.resolve(
-            Text(text)
-                .font(.system(size: 10, weight: .semibold, design: .rounded))
-                .foregroundColor(MaxwinTheme.cream.opacity(0.9))
-        )
-        context.draw(
-            resolved,
-            at: CGPoint(x: yAxisWidth - 4, y: y),
-            anchor: .trailing
-        )
+    private struct StrokePiece {
+        let start: CGPoint
+        let end: CGPoint
+        let color: Color
+
+        var length: CGFloat {
+            hypot(end.x - start.x, end.y - start.y)
+        }
     }
 
-    private func drawSegment(
+    private func coloredPieces(
         from start: CGPoint,
         to end: CGPoint,
         startValue: Double,
         endValue: Double,
-        zeroY: CGFloat,
-        in context: inout GraphicsContext
-    ) {
+        zeroY: CGFloat
+    ) -> [StrokePiece] {
         // Split at zero when a segment crosses the baseline so each side gets its color.
         if (startValue >= 0 && endValue >= 0) || (startValue <= 0 && endValue <= 0) {
-            stroke(from: start, to: end, color: startValue >= 0 && endValue >= 0 ? MaxwinTheme.winGreen : MaxwinTheme.lossRed, in: &context)
-            return
+            let color = startValue >= 0 && endValue >= 0 ? MaxwinTheme.winGreen : MaxwinTheme.lossRed
+            return [StrokePiece(start: start, end: end, color: color)]
         }
 
         let total = abs(startValue) + abs(endValue)
         guard total > 0 else {
-            stroke(from: start, to: end, color: MaxwinTheme.cream.opacity(0.5), in: &context)
-            return
+            return [StrokePiece(start: start, end: end, color: MaxwinTheme.cream.opacity(0.5))]
         }
 
         let t = CGFloat(abs(startValue) / total)
@@ -248,18 +219,48 @@ struct WinningsChartView: View {
             y: zeroY
         )
 
-        stroke(
-            from: start,
-            to: cross,
-            color: startValue >= 0 ? MaxwinTheme.winGreen : MaxwinTheme.lossRed,
-            in: &context
-        )
-        stroke(
-            from: cross,
-            to: end,
-            color: endValue >= 0 ? MaxwinTheme.winGreen : MaxwinTheme.lossRed,
-            in: &context
-        )
+        return [
+            StrokePiece(
+                start: start,
+                end: cross,
+                color: startValue >= 0 ? MaxwinTheme.winGreen : MaxwinTheme.lossRed
+            ),
+            StrokePiece(
+                start: cross,
+                end: end,
+                color: endValue >= 0 ? MaxwinTheme.winGreen : MaxwinTheme.lossRed
+            )
+        ]
+    }
+
+    private func drawPieces(
+        _ pieces: [StrokePiece],
+        progress: Double,
+        in context: inout GraphicsContext
+    ) {
+        let totalLength = pieces.reduce(CGFloat(0)) { $0 + $1.length }
+        guard totalLength > 0 else { return }
+
+        let targetLength = totalLength * CGFloat(progress)
+        var drawnLength: CGFloat = 0
+
+        for piece in pieces {
+            if drawnLength >= targetLength { break }
+
+            let remaining = targetLength - drawnLength
+            if piece.length <= remaining + 0.000_1 {
+                stroke(from: piece.start, to: piece.end, color: piece.color, in: &context)
+                drawnLength += piece.length
+            } else {
+                let t = remaining / piece.length
+                let partialEnd = CGPoint(
+                    x: piece.start.x + (piece.end.x - piece.start.x) * t,
+                    y: piece.start.y + (piece.end.y - piece.start.y) * t
+                )
+                stroke(from: piece.start, to: partialEnd, color: piece.color, in: &context)
+                break
+            }
+        }
     }
 
     private func stroke(
@@ -271,7 +272,11 @@ struct WinningsChartView: View {
         var path = Path()
         path.move(to: start)
         path.addLine(to: end)
-        context.stroke(path, with: .color(color), style: StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round))
+        context.stroke(
+            path,
+            with: .color(color),
+            style: StrokeStyle(lineWidth: lineWidth, lineCap: .round, lineJoin: .round)
+        )
     }
 }
 
@@ -283,7 +288,7 @@ struct WinningsChartView: View {
             EarningsDataPoint(id: UUID(), date: .now.addingTimeInterval(-86400 * 2), cumulativeProfit: 80, periodProfit: 120),
             EarningsDataPoint(id: UUID(), date: .now.addingTimeInterval(-86400), cumulativeProfit: 210, periodProfit: 130)
         ],
-        showYAxisLabels: true
+        drawProgress: 1
     )
     .frame(height: 240)
     .padding(12)
