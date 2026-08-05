@@ -213,8 +213,10 @@ struct TrackView: View {
             }
             .fixedSize(horizontal: false, vertical: true)
 
-            betBiggerBanner
-                .padding(.top, metricsGap)
+            if viewModel.tipsEnabled {
+                betBiggerBanner
+                    .padding(.top, metricsGap)
+            }
         }
     }
 

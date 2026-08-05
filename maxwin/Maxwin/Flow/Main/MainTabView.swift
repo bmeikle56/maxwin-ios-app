@@ -29,8 +29,8 @@ struct MainTabView: View {
 
             SettingsView(
                 viewModel: viewModel.settingsViewModel,
-                onAnimationPreferenceChanged: {
-                    viewModel.syncAnimationPreference()
+                onPreferenceChanged: {
+                    viewModel.syncPreferences()
                 }
             )
             .tabItem {

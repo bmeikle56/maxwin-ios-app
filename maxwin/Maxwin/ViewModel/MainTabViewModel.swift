@@ -38,7 +38,8 @@ final class MainTabViewModel {
         )
         let trackViewModel = TrackViewModel(
             trackDataService: trackDataService,
-            animationsEnabled: settingsService.settings.animationsEnabled
+            animationsEnabled: settingsService.settings.animationsEnabled,
+            tipsEnabled: settingsService.settings.tipsEnabled
         )
         self.trackViewModel = trackViewModel
         self.settingsViewModel = SettingsViewModel(
@@ -52,7 +53,8 @@ final class MainTabViewModel {
         }
     }
 
-    func syncAnimationPreference() {
+    func syncPreferences() {
         trackViewModel.animationsEnabled = settingsService.settings.animationsEnabled
+        trackViewModel.tipsEnabled = settingsService.settings.tipsEnabled
     }
 }
