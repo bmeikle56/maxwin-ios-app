@@ -201,7 +201,9 @@ struct SessionsView: View {
     }
 
     private func sessionCard(_ session: PokerSession) -> some View {
-        HStack(alignment: .top, spacing: 12) {
+        let glow = session.profit >= 0 ? MaxwinTheme.winGreen : MaxwinTheme.lossRed
+
+        return HStack(alignment: .top, spacing: 12) {
             VStack(alignment: .leading, spacing: 6) {
                 Text(session.venue)
                     .font(.system(size: 17, weight: .semibold, design: .rounded))
@@ -220,17 +222,24 @@ struct SessionsView: View {
 
             Text(CurrencyFormatting.signedString(from: session.profit))
                 .font(.system(size: 17, weight: .bold, design: .rounded))
-                .foregroundStyle(session.profit >= 0 ? MaxwinTheme.winGreen : MaxwinTheme.lossRed)
+                .foregroundStyle(glow)
         }
         .padding(16)
         .background(MaxwinTheme.fieldFill, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .strokeBorder(
-                    session.isFavorite ? MaxwinTheme.gold.opacity(0.45) : MaxwinTheme.fieldStroke,
+                    session.isFavorite ? MaxwinTheme.gold.opacity(0.45) : glow.opacity(0.22),
                     lineWidth: 1
                 )
         }
+        .background {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(glow.opacity(0.14))
+                .blur(radius: 5)
+                .padding(1)
+        }
+        .shadow(color: glow.opacity(0.16), radius: 4, x: 0, y: 0)
     }
 }
 

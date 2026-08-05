@@ -182,16 +182,12 @@ struct TrackView: View {
 
     /// Shared gap: chart↔stats and cell↔cell.
     private let metricsGap: CGFloat = 16
-    /// Keeps vertical dividers from meeting the horizontal rule.
-    private let dividerInset: CGFloat = 14
 
     private var metricsSection: some View {
-        VStack(spacing: 0) {
+        VStack(spacing: metricsGap) {
             chartCard
 
-            horizontalMetricsDivider
-
-            HStack(spacing: 0) {
+            HStack(spacing: metricsGap) {
                 statTile(title: "BB/100", showsInfo: true) {
                     if let target = viewModel.averageBBPer100 {
                         AnimatedBBPer100Text(
@@ -204,8 +200,6 @@ struct TrackView: View {
                     }
                 }
 
-                verticalMetricsDivider
-
                 statTile(title: "Avg length") {
                     if let target = viewModel.averageSessionMinutes {
                         AnimatedDurationText(minutes: Double(target) * metricsProgress)
@@ -214,8 +208,6 @@ struct TrackView: View {
                         placeholderMetric
                     }
                 }
-
-                verticalMetricsDivider
 
                 statTile(title: "Win rate") {
                     if let target = viewModel.sessionWinRate {
@@ -289,51 +281,49 @@ struct TrackView: View {
             .lineLimit(1)
     }
 
-    private var horizontalMetricsDivider: some View {
-        Capsule()
-            .fill(MaxwinTheme.divider)
-            .frame(height: 1)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, (metricsGap - 1) / 2)
-    }
-
-    private var verticalMetricsDivider: some View {
-        Color.clear
-            .frame(width: metricsGap)
-            .overlay {
-                Capsule()
-                    .fill(MaxwinTheme.divider)
-                    .frame(width: 1)
-                    .padding(.vertical, dividerInset)
-            }
-    }
-
     private func statTile<Content: View>(
         title: String,
         showsInfo: Bool = false,
         @ViewBuilder value: () -> Content
     ) -> some View {
         VStack(spacing: 6) {
-            HStack(spacing: 3) {
+            ZStack {
                 Text(title)
                     .font(.system(size: 12, weight: .medium, design: .rounded))
                     .foregroundStyle(MaxwinTheme.mutedCream)
-                    .multilineTextAlignment(.center)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
 
                 if showsInfo {
-                    Button {
-                        showingBBPer100Info = true
-                    } label: {
-                        Image(systemName: "info.circle")
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundStyle(MaxwinTheme.mutedCream.opacity(0.85))
+                    HStack(spacing: 3) {
+                        Text(title)
+                            .font(.system(size: 12, weight: .medium, design: .rounded))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.85)
+                            .hidden()
+
+                        Button {
+                            showingBBPer100Info = true
+                        } label: {
+                            Image(systemName: "info.circle")
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundStyle(MaxwinTheme.mutedCream.opacity(0.85))
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("What is BB/100?")
                     }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("What is BB/100?")
                 }
             }
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(
+                Color(white: 0.42).opacity(0.35),
+                in: RoundedRectangle(cornerRadius: 6, style: .continuous)
+            )
 
             value()
+                .frame(maxWidth: .infinity)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 16)
@@ -620,6 +610,28 @@ private struct WinRateIceAura: View {
                             y: CGFloat(sin(t * (2.2 + Double(index) * 0.35) + phase)) * (1.5 + CGFloat(index) * 0.35) * intensity * scaleY
                         )
                         .blur(radius: (3 + CGFloat(index) * 0.7) * max(scaleX, scaleY))
+                }
+
+                ForEach(0..<7, id: \.self) { index in
+                    let phase = Double(index) * 1.37
+                    let cycle = (t * (0.35 + Double(index % 3) * 0.08) + phase)
+                        .truncatingRemainder(dividingBy: 1.0)
+                    let fallProgress = cycle < 0 ? cycle + 1 : cycle
+                    let flakeSize = (4.5 + CGFloat(index % 3) * 1.4) * max(scaleX, scaleY) * 0.85
+                    let xBase = (CGFloat(index) / 6.0 - 0.5) * width * 0.85
+                    let xDrift = CGFloat(sin(t * (1.1 + Double(index) * 0.25) + phase)) * 6 * scaleX
+                    let y = (-height * 0.55) + CGFloat(fallProgress) * height * 1.2
+                    let fade = sin(fallProgress * .pi)
+
+                    Image(systemName: "snowflake")
+                        .font(.system(size: flakeSize, weight: .semibold))
+                        .foregroundStyle(
+                            Color(red: 0.78, green: 0.92, blue: 1.0)
+                                .opacity(0.55 * intensity * fade)
+                        )
+                        .rotationEffect(.degrees(t * (18 + Double(index) * 7) + phase * 40))
+                        .offset(x: xBase + xDrift, y: y)
+                        .blur(radius: index % 2 == 0 ? 0.2 : 0.6)
                 }
             }
         }
