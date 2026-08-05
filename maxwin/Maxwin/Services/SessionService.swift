@@ -22,8 +22,33 @@ enum SessionServiceError: LocalizedError, Equatable {
     }
 }
 
+struct SessionListPage: Equatable, Sendable {
+    let sessions: [PokerSession]
+    let offset: Int
+    let limit: Int
+    let totalCount: Int
+
+    var hasMore: Bool {
+        offset + sessions.count < totalCount
+    }
+
+    var nextOffset: Int {
+        offset + sessions.count
+    }
+}
+
+struct SessionListQuery: Equatable, Sendable {
+    var offset: Int = 0
+    var limit: Int = 10
+    var favoritesOnly: Bool = false
+    var searchText: String = ""
+}
+
 protocol SessionServicing: AnyObject {
-    func fetchSessions() async throws -> [PokerSession]
+    /// Paginated newest-first listing for the Sessions tab.
+    func fetchSessionPage(_ query: SessionListQuery) async throws -> SessionListPage
+    /// Full history for Track / earnings aggregates.
+    func fetchAllSessions() async throws -> [PokerSession]
     func createSession(_ session: PokerSession) async throws -> PokerSession
     func updateSession(_ session: PokerSession) async throws -> PokerSession
     func deleteSession(id: UUID) async throws
@@ -39,7 +64,26 @@ final class MockSessionService: SessionServicing {
         self.sessions = sessions.sorted { $0.date > $1.date }
     }
 
-    func fetchSessions() async throws -> [PokerSession] {
+    func fetchSessionPage(_ query: SessionListQuery) async throws -> SessionListPage {
+        try await Task.sleep(nanoseconds: networkDelayNanoseconds)
+
+        let filtered = filteredSessions(
+            favoritesOnly: query.favoritesOnly,
+            searchText: query.searchText
+        )
+        let limit = max(query.limit, 1)
+        let offset = max(query.offset, 0)
+        let slice = Array(filtered.dropFirst(offset).prefix(limit))
+
+        return SessionListPage(
+            sessions: slice,
+            offset: offset,
+            limit: limit,
+            totalCount: filtered.count
+        )
+    }
+
+    func fetchAllSessions() async throws -> [PokerSession] {
         try await Task.sleep(nanoseconds: networkDelayNanoseconds)
         return sessions
     }
@@ -71,6 +115,26 @@ final class MockSessionService: SessionServicing {
         sessions.removeAll { $0.id == id }
     }
 
+    private func filteredSessions(favoritesOnly: Bool, searchText: String) -> [PokerSession] {
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        return sessions.filter { session in
+            if favoritesOnly && !session.isFavorite {
+                return false
+            }
+            guard !query.isEmpty else { return true }
+
+            let haystacks: [String] = [
+                session.venue,
+                session.stakes,
+                session.gameType.rawValue
+            ] + session.hands.flatMap { hand in
+                [hand.holeCards, hand.position, hand.notes ?? ""]
+            }
+
+            return haystacks.contains { $0.localizedCaseInsensitiveContains(query) }
+        }
+    }
+
     private func validate(_ session: PokerSession) throws {
         guard !session.venue.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
               !session.stakes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
@@ -89,16 +153,18 @@ final class MockSessionService: SessionServicing {
             return calendar.date(bySettingHour: hour, minute: 0, second: 0, of: day) ?? day
         }
 
-        return [
+        // Chronological arc (oldest → newest): early green → deep red → recovery → high green.
+        // Cumulative roughly: +220 → +560 → +160 → −320 → −700 → −400 → +100 → +640 → +1440 → +2200
+        let featured: [PokerSession] = [
             PokerSession(
                 id: UUID(),
-                date: date(daysAgo: 2),
+                date: date(daysAgo: 1),
                 venue: "Bellagio",
                 gameType: .cash,
                 stakes: "2/5 NL",
-                durationMinutes: 210,
+                durationMinutes: 240,
                 buyIn: 500,
-                cashOut: 1280,
+                cashOut: 1260,
                 hands: [
                     Hand(
                         id: UUID(),
@@ -160,64 +226,58 @@ final class MockSessionService: SessionServicing {
             ),
             PokerSession(
                 id: UUID(),
-                date: date(daysAgo: 8, hour: 14),
-                venue: "Local home game",
+                date: date(daysAgo: 5),
+                venue: "WSOP Satellite",
                 gameType: .tournament,
-                stakes: "$100 buy-in",
-                durationMinutes: 320,
-                buyIn: 100,
-                cashOut: 0,
+                stakes: "$250 buy-in",
+                durationMinutes: 410,
+                buyIn: 250,
+                cashOut: 1050,
                 hands: [
                     Hand(
                         id: UUID(),
                         handNumber: 1,
-                        position: "MP",
-                        holeCards: "K♥ K♦",
-                        result: -100,
-                        notes: "Busted with overpair",
+                        position: "HJ",
+                        holeCards: "A♠ K♦",
+                        result: 620,
+                        notes: "Final table double",
                         detail: HandDetail(
-                            board: "K♣ 9♠ 4♦ Q♥ A♠",
-                            potSize: 240,
+                            board: "A♣ 8♦ 4♠ K♥ 2♣",
+                            potSize: 1_240,
                             opponents: 1,
-                            villainHand: "A♦ Q♦",
-                            allInStreet: "River",
-                            streets: nil
+                            villainHand: "A♥ Q♠",
+                            allInStreet: "Flop",
+                            streets: [
+                                StreetAction(id: UUID(), street: "Flop", action: "Shove called", potAfter: 1_240)
+                            ]
                         )
                     ),
-                    Hand(
-                        id: UUID(),
-                        handNumber: 2,
-                        position: "BTN",
-                        holeCards: "A♣ 9♣",
-                        result: 45,
-                        notes: "Chip up early",
-                        detail: nil
-                    )
+                    Hand(id: UUID(), handNumber: 2, position: "SB", holeCards: "9♣ 9♦", result: 310, notes: nil, detail: nil)
                 ]
             ),
             PokerSession(
                 id: UUID(),
-                date: date(daysAgo: 18),
+                date: date(daysAgo: 12),
                 venue: "ARIA",
                 gameType: .cash,
                 stakes: "1/3 NL",
-                durationMinutes: 180,
+                durationMinutes: 195,
                 buyIn: 300,
-                cashOut: 145,
+                cashOut: 840,
                 hands: [
-                    Hand(id: UUID(), handNumber: 1, position: "BB", holeCards: "7♥ 7♠", result: -90, notes: "Coolered by overpair", detail: nil),
-                    Hand(id: UUID(), handNumber: 2, position: "HJ", holeCards: "A♠ J♥", result: -65, notes: nil, detail: nil)
+                    Hand(id: UUID(), handNumber: 1, position: "BB", holeCards: "7♥ 7♠", result: 180, notes: "Set mines pay off", detail: nil),
+                    Hand(id: UUID(), handNumber: 2, position: "HJ", holeCards: "A♠ J♥", result: 95, notes: nil, detail: nil)
                 ]
             ),
             PokerSession(
                 id: UUID(),
-                date: date(daysAgo: 40),
+                date: date(daysAgo: 20),
                 venue: "Online - Ignition",
                 gameType: .cash,
                 stakes: "25NL",
-                durationMinutes: 95,
+                durationMinutes: 110,
                 buyIn: 100,
-                cashOut: 246,
+                cashOut: 600,
                 hands: [
                     Hand(id: UUID(), handNumber: 1, position: "CO", holeCards: "T♠ T♥", result: 88, notes: nil, detail: nil),
                     Hand(
@@ -242,13 +302,50 @@ final class MockSessionService: SessionServicing {
             ),
             PokerSession(
                 id: UUID(),
-                date: date(daysAgo: 95),
+                date: date(daysAgo: 28, hour: 14),
+                venue: "Local home game",
+                gameType: .tournament,
+                stakes: "$100 buy-in",
+                durationMinutes: 280,
+                buyIn: 100,
+                cashOut: 400,
+                hands: [
+                    Hand(
+                        id: UUID(),
+                        handNumber: 1,
+                        position: "MP",
+                        holeCards: "K♥ K♦",
+                        result: 220,
+                        notes: "Laddered late",
+                        detail: HandDetail(
+                            board: "K♣ 9♠ 4♦ Q♥ 2♠",
+                            potSize: 240,
+                            opponents: 1,
+                            villainHand: "A♦ Q♦",
+                            allInStreet: "Turn",
+                            streets: nil
+                        )
+                    ),
+                    Hand(
+                        id: UUID(),
+                        handNumber: 2,
+                        position: "BTN",
+                        holeCards: "A♣ 9♣",
+                        result: 45,
+                        notes: "Chip up early",
+                        detail: nil
+                    )
+                ]
+            ),
+            PokerSession(
+                id: UUID(),
+                date: date(daysAgo: 42),
                 venue: "Commerce",
                 gameType: .cash,
                 stakes: "5/10 NL",
                 durationMinutes: 260,
                 buyIn: 1500,
-                cashOut: 920,
+                cashOut: 1120,
                 hands: [
                     Hand(id: UUID(), handNumber: 1, position: "UTG", holeCards: "A♣ A♦", result: -420, notes: "Lost to rivered straight", detail: nil),
                     Hand(id: UUID(), handNumber: 2, position: "BTN", holeCards: "K♠ Q♠", result: -160, notes: nil, detail: nil)
@@ -256,37 +353,83 @@ final class MockSessionService: SessionServicing {
             ),
             PokerSession(
                 id: UUID(),
-                date: date(daysAgo: 200),
-                venue: "WSOP Satellite",
-                gameType: .tournament,
-                stakes: "$250 buy-in",
-                durationMinutes: 410,
-                buyIn: 250,
-                cashOut: 1850,
+                date: date(daysAgo: 55),
+                venue: "The Bike",
+                gameType: .cash,
+                stakes: "2/5 NL",
+                durationMinutes: 220,
+                buyIn: 500,
+                cashOut: 20,
                 hands: [
-                    Hand(
-                        id: UUID(),
-                        handNumber: 1,
-                        position: "HJ",
-                        holeCards: "A♠ K♦",
-                        result: 620,
-                        notes: "Final table double",
-                        detail: HandDetail(
-                            board: "A♣ 8♦ 4♠ K♥ 2♣",
-                            potSize: 1_240,
-                            opponents: 1,
-                            villainHand: "A♥ Q♠",
-                            allInStreet: "Flop",
-                            streets: [
-                                StreetAction(id: UUID(), street: "Flop", action: "Shove called", potAfter: 1_240)
-                            ]
-                        )
-                    ),
-                    Hand(id: UUID(), handNumber: 2, position: "SB", holeCards: "9♣ 9♦", result: 310, notes: nil, detail: nil)
+                    Hand(id: UUID(), handNumber: 1, position: "CO", holeCards: "J♠ J♥", result: -250, notes: "Coolered by kings", detail: nil),
+                    Hand(id: UUID(), handNumber: 2, position: "BB", holeCards: "A♥ T♥", result: -180, notes: "Bluff caught", detail: nil)
+                ]
+            ),
+            PokerSession(
+                id: UUID(),
+                date: date(daysAgo: 70),
+                venue: "Hustler",
+                gameType: .cash,
+                stakes: "1/3 NL",
+                durationMinutes: 175,
+                buyIn: 400,
+                cashOut: 0,
+                hands: [
+                    Hand(id: UUID(), handNumber: 1, position: "UTG", holeCards: "A♠ A♣", result: -280, notes: "Set over set", detail: nil),
+                    Hand(id: UUID(), handNumber: 2, position: "BTN", holeCards: "K♦ Q♦", result: -95, notes: nil, detail: nil)
+                ]
+            ),
+            PokerSession(
+                id: UUID(),
+                date: date(daysAgo: 95),
+                venue: "Venetian",
+                gameType: .cash,
+                stakes: "2/5 NL",
+                durationMinutes: 200,
+                buyIn: 500,
+                cashOut: 840,
+                hands: [
+                    Hand(id: UUID(), handNumber: 1, position: "HJ", holeCards: "A♣ K♣", result: 210, notes: nil, detail: nil),
+                    Hand(id: UUID(), handNumber: 2, position: "SB", holeCards: "9♥ 9♦", result: 95, notes: "Stack off vs draw", detail: nil)
+                ]
+            ),
+            PokerSession(
+                id: UUID(),
+                date: date(daysAgo: 130),
+                venue: "Online - PokerStars",
+                gameType: .cash,
+                stakes: "50NL",
+                durationMinutes: 140,
+                buyIn: 150,
+                cashOut: 370,
+                hands: [
+                    Hand(id: UUID(), handNumber: 1, position: "CO", holeCards: "A♠ Q♠", result: 120, notes: nil, detail: nil),
+                    Hand(id: UUID(), handNumber: 2, position: "BTN", holeCards: "8♣ 8♦", result: 65, notes: "Set on wet board", detail: nil)
                 ]
             )
         ]
-        .sorted { $0.date > $1.date }
+
+        // Extra lightweight sessions so list pagination is easy to exercise in mocks.
+        let venues = ["Bellagio", "ARIA", "Commerce", "The Bike", "Hustler", "Venetian", "Local home game", "Online - Ignition"]
+        let stakes = ["1/2 NL", "1/3 NL", "2/5 NL", "5/10 NL", "25NL", "50NL"]
+        let extras: [PokerSession] = (0..<20).map { index in
+            let buyIn = Double([200, 300, 500, 800][index % 4])
+            let swing = Double([-180, -90, 40, 120, 260, -40][index % 6])
+            return PokerSession(
+                id: UUID(),
+                date: date(daysAgo: 140 + index * 3, hour: 18 + (index % 4)),
+                venue: venues[index % venues.count],
+                gameType: index % 5 == 0 ? .tournament : .cash,
+                stakes: index % 5 == 0 ? "$\(100 + index * 10) buy-in" : stakes[index % stakes.count],
+                durationMinutes: 90 + (index * 17) % 180,
+                buyIn: buyIn,
+                cashOut: buyIn + swing,
+                hands: [],
+                isFavorite: index % 7 == 0
+            )
+        }
+
+        return (featured + extras).sorted { $0.date > $1.date }
     }()
 
     /// Kept for previews / earnings seeding that still reference the old name.
