@@ -20,6 +20,8 @@ struct RootView: View {
                 LoginView(viewModel: viewModel.loginViewModel)
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(MaxwinTheme.felt.ignoresSafeArea())
         .animation(.easeInOut(duration: 0.35), value: viewModel.onboardingService.hasCompletedOnboarding)
         .animation(.easeInOut(duration: 0.35), value: viewModel.authService.isAuthenticated)
     }

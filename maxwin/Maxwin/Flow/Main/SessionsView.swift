@@ -263,7 +263,7 @@ struct SessionsView: View {
 
             Spacer(minLength: 8)
 
-            SessionProfitText(profit: session.profit, animationsEnabled: false, fontSize: 14)
+            SessionProfitText(profit: session.profit, fontSize: 14)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
