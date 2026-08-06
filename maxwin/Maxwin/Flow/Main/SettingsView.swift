@@ -5,11 +5,13 @@
 //  Created by Braeden Meikle on 8/3/26.
 //
 
+import PhotosUI
 import SwiftUI
 
 struct SettingsView: View {
     @Bindable var viewModel: SettingsViewModel
     var onPreferenceChanged: (() -> Void)?
+    @State private var photoPickerItem: PhotosPickerItem?
 
     var body: some View {
         NavigationStack {
@@ -33,6 +35,15 @@ struct SettingsView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .feltScreenBackground()
             .navigationTitle("Settings")
+            .onAppear {
+                viewModel.reloadAvatar()
+            }
+            .onChange(of: photoPickerItem) { _, item in
+                Task {
+                    await viewModel.updateAvatar(from: item)
+                    photoPickerItem = nil
+                }
+            }
             .alert("Log out?", isPresented: $viewModel.showSignOutConfirmation) {
                 Button("Log out", role: .destructive) {
                     Task { await viewModel.signOut() }
@@ -53,15 +64,24 @@ struct SettingsView: View {
     }
 
     private var profileHeader: some View {
-        HStack(spacing: 14) {
-            ZStack {
-                Circle()
-                    .fill(MaxwinTheme.cream.opacity(0.2))
-                    .frame(width: 56, height: 56)
-                Image(systemName: "person.fill")
-                    .font(.system(size: 22, weight: .semibold))
-                    .foregroundStyle(MaxwinTheme.cream)
+        let avatarImage = viewModel.avatarImage
+        let isUpdatingAvatar = viewModel.isUpdatingAvatar
+
+        return HStack(spacing: 14) {
+            PhotosPicker(
+                selection: $photoPickerItem,
+                matching: .images,
+                photoLibrary: .shared()
+            ) {
+                ProfileAvatarView(
+                    image: avatarImage,
+                    size: 56,
+                    showsCameraBadge: true,
+                    isLoading: isUpdatingAvatar
+                )
             }
+            .buttonStyle(.plain)
+            .disabled(isUpdatingAvatar || viewModel.isSigningOut || viewModel.isDeletingAccount)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(viewModel.username)
@@ -133,6 +153,9 @@ struct SettingsView: View {
 
             NavigationLink {
                 EditProfileView(viewModel: viewModel.makeEditProfileViewModel())
+                    .onDisappear {
+                        viewModel.reloadAvatar()
+                    }
             } label: {
                 settingsRow(
                     title: "Edit Profile",

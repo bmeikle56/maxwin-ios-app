@@ -14,6 +14,7 @@ protocol AuthServicing: AnyObject {
 
     func signIn(with credentials: AuthCredentials) async throws -> User
     func updateUsername(_ username: String) async throws -> User
+    func updateAvatar(imageData: Data?) async throws -> User
     func signOut() async
     func deleteAccount() async throws
     func requestPasswordReset(for username: String) async throws
@@ -69,7 +70,36 @@ final class MockAuthService: AuthServicing {
             throw AuthError.unknown
         }
 
-        let updated = User(id: currentUser.id, username: trimmed)
+        let updated = User(
+            id: currentUser.id,
+            username: trimmed,
+            avatarFileName: currentUser.avatarFileName
+        )
+        persist(user: updated)
+        return updated
+    }
+
+    func updateAvatar(imageData: Data?) async throws -> User {
+        try await Task.sleep(nanoseconds: networkDelayNanoseconds)
+
+        guard let currentUser else {
+            throw AuthError.unknown
+        }
+
+        ProfileAvatarStore.delete(fileName: currentUser.avatarFileName)
+
+        let fileName: String?
+        if let imageData {
+            fileName = try ProfileAvatarStore.save(imageData: imageData, userID: currentUser.id)
+        } else {
+            fileName = nil
+        }
+
+        let updated = User(
+            id: currentUser.id,
+            username: currentUser.username,
+            avatarFileName: fileName
+        )
         persist(user: updated)
         return updated
     }
@@ -105,6 +135,7 @@ final class MockAuthService: AuthServicing {
     }
 
     private func clearSession() {
+        ProfileAvatarStore.delete(fileName: currentUser?.avatarFileName)
         currentUser = nil
         isAuthenticated = false
         userDefaults.removeObject(forKey: userKey)

@@ -22,7 +22,7 @@ struct MainTabView: View {
 
             TrackView(
                 viewModel: viewModel.trackViewModel,
-                sessionsViewModel: sessionsViewModel,
+                sessionsViewModel: viewModel.sessionsViewModel,
                 isSelected: viewModel.selectedTab == .track
             )
                 .tabItem {

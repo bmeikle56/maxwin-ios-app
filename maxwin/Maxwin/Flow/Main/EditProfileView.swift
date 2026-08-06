@@ -5,12 +5,14 @@
 //  Created by Braeden Meikle on 8/3/26.
 //
 
+import PhotosUI
 import SwiftUI
 
 struct EditProfileView: View {
     @Bindable var viewModel: EditProfileViewModel
     @Environment(\.dismiss) private var dismiss
     @FocusState private var isUsernameFocused: Bool
+    @State private var photoPickerItem: PhotosPickerItem?
 
     var body: some View {
         ScrollView {
@@ -91,24 +93,43 @@ struct EditProfileView: View {
         .navigationTitle("Edit Profile")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarColorScheme(.dark, for: .navigationBar)
+        .onChange(of: photoPickerItem) { _, item in
+            Task {
+                await viewModel.updateAvatar(from: item)
+                photoPickerItem = nil
+            }
+        }
     }
 
     private var avatar: some View {
-        VStack(spacing: 12) {
-            ZStack {
-                Circle()
-                    .fill(MaxwinTheme.cream.opacity(0.2))
-                    .frame(width: 88, height: 88)
-                Image(systemName: "person.fill")
-                    .font(.system(size: 36, weight: .semibold))
-                    .foregroundStyle(MaxwinTheme.cream)
+        let avatarImage = viewModel.avatarImage
+        let isUpdatingAvatar = viewModel.isUpdatingAvatar
+
+        return VStack(spacing: 12) {
+            PhotosPicker(
+                selection: $photoPickerItem,
+                matching: .images,
+                photoLibrary: .shared()
+            ) {
+                ProfileAvatarView(
+                    image: avatarImage,
+                    size: 88,
+                    showsCameraBadge: true,
+                    isLoading: isUpdatingAvatar
+                )
             }
+            .buttonStyle(.plain)
+            .disabled(isUpdatingAvatar || viewModel.isSaving)
 
             Text(viewModel.username.isEmpty ? "Player" : viewModel.username)
                 .font(.system(size: 22, weight: .bold, design: .serif))
                 .foregroundStyle(MaxwinTheme.cream)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
+
+            Text("Tap to change photo")
+                .font(.system(size: 12, weight: .medium, design: .rounded))
+                .foregroundStyle(MaxwinTheme.mutedCream)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 8)
