@@ -145,6 +145,25 @@ struct SettingsView: View {
             .tint(Color.white.opacity(0.45))
             .padding(.horizontal, 16)
             .padding(.vertical, 14)
+
+            Divider()
+                .background(MaxwinTheme.fieldStroke)
+                .padding(.leading, 16)
+
+            Toggle(isOn: Binding(
+                get: { viewModel.condensedSessionsList },
+                set: { newValue in
+                    viewModel.setCondensedSessionsList(newValue)
+                    onPreferenceChanged?()
+                }
+            )) {
+                Text("Condensed list")
+                    .font(.system(size: 16, weight: .medium, design: .rounded))
+                    .foregroundStyle(MaxwinTheme.cream)
+            }
+            .tint(Color.white.opacity(0.45))
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
         }
         .background(MaxwinTheme.fieldFill, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay {

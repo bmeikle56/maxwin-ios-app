@@ -8,12 +8,37 @@
 import Foundation
 import Observation
 
+struct SessionWeekGroup: Identifiable, Equatable {
+    var id: Date { weekStart }
+    let weekStart: Date
+    let sessions: [PokerSession]
+
+    var title: String {
+        let calendar = Calendar.current
+        let end = calendar.date(byAdding: .day, value: 6, to: weekStart) ?? weekStart
+
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMM d"
+
+        let startText = formatter.string(from: weekStart)
+        let endText = formatter.string(from: end)
+
+        if calendar.component(.year, from: weekStart) == calendar.component(.year, from: Date()) {
+            return "\(startText) – \(endText)"
+        }
+
+        formatter.dateFormat = "MMM d, yyyy"
+        return "\(formatter.string(from: weekStart)) – \(formatter.string(from: end))"
+    }
+}
+
 @Observable
 @MainActor
 final class SessionsViewModel {
     var sessions: [PokerSession] = []
     var searchText = ""
     var showFavoritesOnly = false
+    var condensedListEnabled: Bool
     var isLoading = false
     var isLoadingMore = false
     var isMutating = false
@@ -32,10 +57,32 @@ final class SessionsViewModel {
 
     init(
         sessionService: SessionServicing,
-        trackDataService: TrackDataServicing
+        trackDataService: TrackDataServicing,
+        condensedListEnabled: Bool = false
     ) {
         self.sessionService = sessionService
         self.trackDataService = trackDataService
+        self.condensedListEnabled = condensedListEnabled
+    }
+
+    var sessionsByWeek: [SessionWeekGroup] {
+        let calendar = Calendar.current
+        var groups: [Date: [PokerSession]] = [:]
+        var order: [Date] = []
+
+        for session in sessions {
+            let weekStart = calendar.dateInterval(of: .weekOfYear, for: session.date)?.start
+                ?? calendar.startOfDay(for: session.date)
+            if groups[weekStart] == nil {
+                order.append(weekStart)
+                groups[weekStart] = []
+            }
+            groups[weekStart, default: []].append(session)
+        }
+
+        return order.map { weekStart in
+            SessionWeekGroup(weekStart: weekStart, sessions: groups[weekStart] ?? [])
+        }
     }
 
     var isEditorPresented: Bool {

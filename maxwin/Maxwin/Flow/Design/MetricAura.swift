@@ -240,6 +240,7 @@ struct MetricIceAura: View {
 struct SessionProfitText: View {
     var profit: Double
     var animationsEnabled: Bool = true
+    var fontSize: CGFloat = 17
     /// Dollar magnitude that maps to strong heat (~±scale → near full fire/ice).
     var heatScale: Double = 400
 
@@ -257,7 +258,7 @@ struct SessionProfitText: View {
 
     var body: some View {
         Text(formatted)
-            .font(.system(size: 17, weight: .bold, design: .rounded))
+            .font(.system(size: fontSize, weight: .bold, design: .rounded))
             .foregroundStyle(MetricHeat.signedHeatColor(normalized: normalized))
             .lineLimit(1)
             .minimumScaleFactor(0.8)

@@ -34,7 +34,8 @@ final class MainTabViewModel {
         self.settingsService = settingsService
         self.sessionsViewModel = SessionsViewModel(
             sessionService: sessionService,
-            trackDataService: trackDataService
+            trackDataService: trackDataService,
+            condensedListEnabled: settingsService.settings.condensedSessionsList
         )
         let trackViewModel = TrackViewModel(
             trackDataService: trackDataService,
@@ -56,5 +57,6 @@ final class MainTabViewModel {
     func syncPreferences() {
         trackViewModel.animationsEnabled = settingsService.settings.animationsEnabled
         trackViewModel.tipsEnabled = settingsService.settings.tipsEnabled
+        sessionsViewModel.condensedListEnabled = settingsService.settings.condensedSessionsList
     }
 }

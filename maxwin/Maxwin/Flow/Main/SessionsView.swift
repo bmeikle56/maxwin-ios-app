@@ -17,6 +17,12 @@ struct SessionsView: View {
         return formatter
     }()
 
+    private let condensedDateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "EEE MMM d"
+        return formatter
+    }()
+
     var body: some View {
         NavigationStack {
             Group {
@@ -150,22 +156,27 @@ struct SessionsView: View {
 
     private var sessionsList: some View {
         ScrollView {
-            LazyVStack(spacing: 12) {
+            LazyVStack(spacing: viewModel.condensedListEnabled ? 0 : 12) {
                 if let errorMessage = viewModel.errorMessage {
                     Text(errorMessage)
                         .font(.system(size: 13, weight: .medium, design: .rounded))
                         .foregroundStyle(MaxwinTheme.lossRed)
                         .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.bottom, viewModel.condensedListEnabled ? 8 : 0)
                 }
 
-                ForEach(viewModel.sessions) { session in
-                    NavigationLink(value: session.id) {
-                        sessionCard(session)
-                    }
-                    .buttonStyle(.plain)
-                    .onAppear {
-                        Task {
-                            await viewModel.loadMoreIfNeeded(currentSessionID: session.id)
+                if viewModel.condensedListEnabled {
+                    condensedSessionsList
+                } else {
+                    ForEach(viewModel.sessions) { session in
+                        NavigationLink(value: session.id) {
+                            sessionCard(session)
+                        }
+                        .buttonStyle(.plain)
+                        .onAppear {
+                            Task {
+                                await viewModel.loadMoreIfNeeded(currentSessionID: session.id)
+                            }
                         }
                     }
                 }
@@ -180,6 +191,83 @@ struct SessionsView: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
         }
+    }
+
+    private var condensedSessionsList: some View {
+        let weeks = viewModel.sessionsByWeek
+
+        return ForEach(Array(weeks.enumerated()), id: \.element.id) { index, week in
+            VStack(alignment: .leading, spacing: 0) {
+                Text(week.title)
+                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                    .foregroundStyle(MaxwinTheme.mutedCream)
+                    .padding(.horizontal, 4)
+                    .padding(.bottom, 6)
+                    .padding(.top, index == 0 ? 0 : 4)
+
+                VStack(spacing: 0) {
+                    ForEach(week.sessions) { session in
+                        NavigationLink(value: session.id) {
+                            condensedSessionRow(session)
+                        }
+                        .buttonStyle(.plain)
+                        .onAppear {
+                            Task {
+                                await viewModel.loadMoreIfNeeded(currentSessionID: session.id)
+                            }
+                        }
+
+                        if session.id != week.sessions.last?.id {
+                            Divider()
+                                .background(MaxwinTheme.fieldStroke)
+                                .padding(.leading, 12)
+                        }
+                    }
+                }
+                .background(MaxwinTheme.fieldFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .strokeBorder(MaxwinTheme.fieldStroke, lineWidth: 1)
+                }
+
+                if index < weeks.count - 1 {
+                    Divider()
+                        .background(MaxwinTheme.divider)
+                        .padding(.vertical, 12)
+                }
+            }
+        }
+    }
+
+    private func condensedSessionRow(_ session: PokerSession) -> some View {
+        HStack(spacing: 10) {
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 6) {
+                    Text(session.venue)
+                        .font(.system(size: 14, weight: .semibold, design: .rounded))
+                        .foregroundStyle(MaxwinTheme.cream)
+                        .lineLimit(1)
+
+                    if session.isFavorite {
+                        Image(systemName: "star.fill")
+                            .font(.system(size: 9, weight: .semibold))
+                            .foregroundStyle(MaxwinTheme.gold)
+                    }
+                }
+
+                Text("\(condensedDateFormatter.string(from: session.date)) · \(session.stakes)")
+                    .font(.system(size: 11, weight: .medium, design: .rounded))
+                    .foregroundStyle(MaxwinTheme.mutedCream)
+                    .lineLimit(1)
+            }
+
+            Spacer(minLength: 8)
+
+            SessionProfitText(profit: session.profit, animationsEnabled: false, fontSize: 14)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .contentShape(Rectangle())
     }
 
     private func sessionCard(_ session: PokerSession) -> some View {

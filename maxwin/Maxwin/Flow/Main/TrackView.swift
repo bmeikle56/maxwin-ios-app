@@ -17,8 +17,11 @@ struct TrackView: View {
     @State private var metricsGeneration = 0
     @State private var metricsAnimationTask: Task<Void, Never>?
     @State private var showingBBPer100Info = false
+    @State private var jesterWiggle = false
+    @State private var jesterAnimationTask: Task<Void, Never>?
 
     private let metricsCountDuration: TimeInterval = 2.55
+    private let jesterAnimationInterval: Duration = .seconds(8)
 
     var body: some View {
         NavigationStack {
@@ -54,11 +57,25 @@ struct TrackView: View {
                 Task { await appearOnTrackTab() }
             }
             .onChange(of: isSelected) { _, selected in
-                guard selected else { return }
+                guard selected else {
+                    stopJesterAnimationLoop()
+                    return
+                }
                 Task { await appearOnTrackTab() }
+                restartJesterAnimationLoop()
             }
             .onChange(of: metricsAnimationKey) { _, _ in
                 animateMetrics()
+            }
+            .onChange(of: viewModel.animationsEnabled) { _, _ in
+                restartJesterAnimationLoop()
+            }
+            .onChange(of: viewModel.tipsEnabled) { _, enabled in
+                if enabled {
+                    restartJesterAnimationLoop()
+                } else {
+                    stopJesterAnimationLoop()
+                }
             }
         }
     }
@@ -74,6 +91,7 @@ struct TrackView: View {
     private func appearOnTrackTab() async {
         await viewModel.load()
         animateMetrics()
+        restartJesterAnimationLoop()
     }
 
     private var rangePicker: some View {
@@ -294,6 +312,9 @@ struct TrackView: View {
                 .resizable()
                 .scaledToFit()
                 .frame(width: jesterSize, height: jesterSize)
+                .rotationEffect(.degrees(jesterWiggle ? 16 : 0))
+                .scaleEffect(jesterWiggle ? 1.14 : 1)
+                .offset(y: jesterWiggle ? -2 : 0)
                 .accessibilityHidden(true)
 
             Text("Bet bigger!")
@@ -313,6 +334,60 @@ struct TrackView: View {
             Color(white: 0.06),
             in: RoundedRectangle(cornerRadius: 12, style: .continuous)
         )
+    }
+
+    private func restartJesterAnimationLoop() {
+        stopJesterAnimationLoop()
+
+        guard viewModel.animationsEnabled, viewModel.tipsEnabled, isSelected else { return }
+
+        jesterAnimationTask = Task { @MainActor in
+            while !Task.isCancelled {
+                do {
+                    try await Task.sleep(for: jesterAnimationInterval)
+                } catch {
+                    return
+                }
+
+                guard !Task.isCancelled,
+                      viewModel.animationsEnabled,
+                      viewModel.tipsEnabled,
+                      isSelected
+                else { return }
+
+                await playJesterWiggle()
+            }
+        }
+    }
+
+    private func stopJesterAnimationLoop() {
+        jesterAnimationTask?.cancel()
+        jesterAnimationTask = nil
+        jesterWiggle = false
+    }
+
+    private func playJesterWiggle() async {
+        withAnimation(.spring(response: 0.26, dampingFraction: 0.38)) {
+            jesterWiggle = true
+        }
+        try? await Task.sleep(for: .milliseconds(300))
+        guard !Task.isCancelled else { return }
+
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.55)) {
+            jesterWiggle = false
+        }
+        try? await Task.sleep(for: .milliseconds(120))
+        guard !Task.isCancelled else { return }
+
+        withAnimation(.spring(response: 0.24, dampingFraction: 0.36)) {
+            jesterWiggle = true
+        }
+        try? await Task.sleep(for: .milliseconds(260))
+        guard !Task.isCancelled else { return }
+
+        withAnimation(.spring(response: 0.36, dampingFraction: 0.62)) {
+            jesterWiggle = false
+        }
     }
 
     private var bbPer100InfoOverlay: some View {

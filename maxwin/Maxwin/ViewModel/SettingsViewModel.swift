@@ -38,6 +38,10 @@ final class SettingsViewModel {
         settingsService.settings.tipsEnabled
     }
 
+    var condensedSessionsList: Bool {
+        settingsService.settings.condensedSessionsList
+    }
+
     init(
         authService: AuthServicing,
         settingsService: SettingsServicing,
@@ -80,6 +84,10 @@ final class SettingsViewModel {
 
     func setTipsEnabled(_ enabled: Bool) {
         settingsService.updateTipsEnabled(enabled)
+    }
+
+    func setCondensedSessionsList(_ enabled: Bool) {
+        settingsService.updateCondensedSessionsList(enabled)
     }
 
     func makeEditProfileViewModel() -> EditProfileViewModel {
