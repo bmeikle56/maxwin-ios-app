@@ -137,9 +137,9 @@ struct TrackView: View {
     private var summaryHeader: some View {
         HStack(alignment: .center, spacing: 12) {
             HStack(alignment: .center, spacing: 8) {
-                Text(CurrencyFormatting.signedString(from: viewModel.totalProfit))
+                Text(totalProfitLabel)
                     .font(.system(size: 34, weight: .bold, design: .serif))
-                    .foregroundStyle(MaxwinTheme.headerGray)
+                    .foregroundStyle(totalProfitColor)
 
                 Capsule()
                     .fill(MaxwinTheme.headerGray.opacity(0.4))
@@ -163,6 +163,21 @@ struct TrackView: View {
     private var hoursPlayedLabel: String {
         let hours = viewModel.totalHoursPlayed
         return hours == 1 ? "1 hr" : "\(hours) hrs"
+    }
+
+    private var totalProfitLabel: String {
+        let profit = viewModel.totalProfit
+        if profit > 0 {
+            return CurrencyFormatting.string(from: profit)
+        }
+        return CurrencyFormatting.signedString(from: profit)
+    }
+
+    private var totalProfitColor: Color {
+        let profit = viewModel.totalProfit
+        if profit > 0 { return MaxwinTheme.winGreen }
+        if profit < 0 { return MaxwinTheme.lossRed }
+        return .white
     }
 
     private var loadingContent: some View {
@@ -206,8 +221,10 @@ struct TrackView: View {
         .background(MaxwinTheme.panelFill, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
 
-    /// Shared gap: chart↔stats and cell↔cell.
+    /// Shared gap: chart↔stats.
     private let metricsGap: CGFloat = 16
+    /// Gap between the paired stat tiles / quick actions.
+    private let pairedContentGap: CGFloat = 32
     private let tipPadding: CGFloat = 8
     private let jesterSize: CGFloat = 28
     private let tipTextInset: CGFloat = 6
@@ -218,7 +235,7 @@ struct TrackView: View {
         VStack(spacing: metricsGap) {
             chartCard
 
-            HStack(alignment: .top, spacing: metricsGap) {
+            HStack(alignment: .top, spacing: pairedContentGap) {
                 statTile(title: "BB/100", showsInfo: true) {
                     if let target = viewModel.averageBBPer100 {
                         AnimatedBBPer100Text(value: target * metricsProgress)
@@ -227,15 +244,16 @@ struct TrackView: View {
                         placeholderMetric
                     }
                 }
+                .frame(width: quickActionSide)
 
-                statTile(title: "Avg length") {
-                    if let target = viewModel.averageSessionMinutes {
-                        AnimatedDurationText(minutes: Double(target) * metricsProgress)
-                            .id("duration-\(metricsGeneration)")
-                    } else {
-                        placeholderMetric
-                    }
-                }
+                // statTile(title: "Avg length") {
+                //     if let target = viewModel.averageSessionMinutes {
+                //         AnimatedDurationText(minutes: Double(target) * metricsProgress)
+                //             .id("duration-\(metricsGeneration)")
+                //     } else {
+                //         placeholderMetric
+                //     }
+                // }
 
                 statTile(title: "Win rate") {
                     if let target = viewModel.sessionWinRate {
@@ -245,15 +263,16 @@ struct TrackView: View {
                         placeholderMetric
                     }
                 }
+                .frame(width: quickActionSide)
             }
-            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .center)
         }
     }
 
     private let quickActionSide: CGFloat = 112
 
     private var quickActionsSection: some View {
-        HStack(spacing: metricsGap) {
+        HStack(spacing: pairedContentGap) {
             quickActionButton(
                 title: "Record",
                 subtitle: "Live session",
@@ -270,7 +289,7 @@ struct TrackView: View {
                 sessionsViewModel.beginCreateSession()
             }
         }
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, alignment: .center)
     }
 
     private func quickActionButton(
