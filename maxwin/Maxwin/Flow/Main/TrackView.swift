@@ -66,7 +66,7 @@ struct TrackView: View {
     /// Re-triggers the count-up when range or underlying stats change.
     private var metricsAnimationKey: String {
         let bb = viewModel.averageBBPer100.map(String.init(describing:)) ?? "nil"
-        let minutes = String(viewModel.totalMinutesPlayed)
+        let minutes = viewModel.averageSessionMinutes.map { String($0) } ?? "nil"
         let winRate = viewModel.sessionWinRate.map(String.init(describing:)) ?? "nil"
         return "\(viewModel.selectedRange.rawValue)|\(bb)|\(minutes)|\(winRate)|\(viewModel.isLoading)"
     }
@@ -118,9 +118,21 @@ struct TrackView: View {
 
     private var summaryHeader: some View {
         HStack(alignment: .center, spacing: 12) {
-            Text(CurrencyFormatting.signedString(from: viewModel.totalProfit))
-                .font(.system(size: 34, weight: .bold, design: .serif))
-                .foregroundStyle(MaxwinTheme.headerGray)
+            HStack(alignment: .center, spacing: 8) {
+                Text(CurrencyFormatting.signedString(from: viewModel.totalProfit))
+                    .font(.system(size: 34, weight: .bold, design: .serif))
+                    .foregroundStyle(MaxwinTheme.headerGray)
+
+                Capsule()
+                    .fill(MaxwinTheme.headerGray.opacity(0.4))
+                    .frame(width: 1, height: 18)
+
+                Text(hoursPlayedLabel)
+                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                    .foregroundStyle(MaxwinTheme.headerGray)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
 
             Spacer(minLength: 8)
 
@@ -128,6 +140,11 @@ struct TrackView: View {
                 betBiggerBanner
             }
         }
+    }
+
+    private var hoursPlayedLabel: String {
+        let hours = viewModel.totalHoursPlayed
+        return hours == 1 ? "1 hr" : "\(hours) hrs"
     }
 
     private var loadingContent: some View {
@@ -193,9 +210,13 @@ struct TrackView: View {
                     }
                 }
 
-                statTile(title: "Play time") {
-                    AnimatedDurationText(minutes: Double(viewModel.totalMinutesPlayed) * metricsProgress)
-                        .id("duration-\(metricsGeneration)")
+                statTile(title: "Avg length") {
+                    if let target = viewModel.averageSessionMinutes {
+                        AnimatedDurationText(minutes: Double(target) * metricsProgress)
+                            .id("duration-\(metricsGeneration)")
+                    } else {
+                        placeholderMetric
+                    }
                 }
 
                 statTile(title: "Win rate") {
@@ -356,36 +377,28 @@ struct TrackView: View {
         @ViewBuilder value: () -> Content
     ) -> some View {
         VStack(spacing: 22) {
-            HStack(spacing: 0) {
-                Spacer(minLength: 0)
+            HStack(spacing: 5) {
+                Text(title)
+                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                    .foregroundStyle(MaxwinTheme.mutedCream)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
 
-                HStack(spacing: 5) {
-                    Text(title)
-                        .font(.system(size: 12, weight: .medium, design: .rounded))
-                        .foregroundStyle(MaxwinTheme.mutedCream)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.85)
-
-                    if showsInfo {
-                        Button {
-                            showingBBPer100Info = true
-                        } label: {
-                            Image(systemName: "info.circle")
-                                .font(.system(size: 11, weight: .medium))
-                                .foregroundStyle(MaxwinTheme.mutedCream.opacity(0.85))
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel("What is BB/100?")
+                if showsInfo {
+                    Button {
+                        showingBBPer100Info = true
+                    } label: {
+                        Image(systemName: "info.circle")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(MaxwinTheme.mutedCream.opacity(0.85))
                     }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("What is BB/100?")
                 }
-
-                Spacer(minLength: 0)
             }
-            .padding(.horizontal, 4)
-            .padding(.vertical, 4)
-            .frame(maxWidth: .infinity)
+            .padding(4)
             .background(
-                Color(white: 0.42).opacity(0.28),
+                Color(white: 0.42).opacity(0.18),
                 in: RoundedRectangle(cornerRadius: 6, style: .continuous)
             )
 
@@ -395,7 +408,7 @@ struct TrackView: View {
         .frame(maxWidth: .infinity, alignment: .top)
         .padding(.vertical, 16)
         .padding(.horizontal, 4)
-        .background(translucentPanelFill, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .background(MaxwinTheme.panelFill, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
 
     private func animateMetrics() {
