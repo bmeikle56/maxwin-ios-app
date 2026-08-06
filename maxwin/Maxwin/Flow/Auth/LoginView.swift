@@ -30,6 +30,11 @@ struct LoginView: View {
                 signInButton
                     .padding(.top, 28)
 
+                if viewModel.canOfferBiometricLogin {
+                    biometricButton
+                        .padding(.top, 14)
+                }
+
                 if let errorMessage = viewModel.errorMessage {
                     Text(errorMessage)
                         .font(.system(size: 13, weight: .medium, design: .rounded))
@@ -44,6 +49,9 @@ struct LoginView: View {
         .scrollDismissesKeyboard(.interactively)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .feltScreenBackground()
+        .task {
+            await viewModel.prepareOnAppear()
+        }
         .alert("Forgot password", isPresented: $viewModel.showForgotPasswordAlert) {
             Button("OK", role: .cancel) {}
         } message: {
@@ -99,7 +107,7 @@ struct LoginView: View {
                 .underline()
         }
         .buttonStyle(.plain)
-        .disabled(viewModel.isLoading)
+        .disabled(viewModel.isLoading || viewModel.isBiometricUnlockInProgress)
     }
 
     private var signInButton: some View {
@@ -122,7 +130,41 @@ struct LoginView: View {
             .background(MaxwinTheme.gold, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         }
         .buttonStyle(.plain)
-        .disabled(viewModel.isLoading)
+        .disabled(viewModel.isLoading || viewModel.isBiometricUnlockInProgress)
+    }
+
+    private var biometricButton: some View {
+        Button {
+            Task { await viewModel.unlockWithBiometrics() }
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: biometricIconName)
+                    .font(.system(size: 18, weight: .semibold))
+                Text("Sign in with \(viewModel.biometricsDisplayName)")
+                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+            }
+            .foregroundStyle(MaxwinTheme.cream)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 15)
+            .background(MaxwinTheme.fieldFill, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .strokeBorder(MaxwinTheme.fieldStroke, lineWidth: 1)
+            }
+        }
+        .buttonStyle(.plain)
+        .disabled(viewModel.isLoading || viewModel.isBiometricUnlockInProgress)
+    }
+
+    private var biometricIconName: String {
+        switch viewModel.biometricsDisplayName {
+        case "Touch ID":
+            return "touchid"
+        case "Optic ID":
+            return "opticid"
+        default:
+            return "faceid"
+        }
     }
 
     private func authField(
@@ -154,7 +196,7 @@ struct LoginView: View {
             .focused($focusedField, equals: field)
             .submitLabel(submitLabel)
             .onSubmit(onSubmit)
-            .disabled(viewModel.isLoading)
+            .disabled(viewModel.isLoading || viewModel.isBiometricUnlockInProgress)
             .padding(.horizontal, 14)
             .padding(.vertical, 14)
             .background(MaxwinTheme.fieldFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
@@ -178,6 +220,7 @@ struct LoginView: View {
     LoginView(
         viewModel: LoginViewModel(
             authService: MockAuthService(),
+            biometricService: BiometricAuthService(),
             trackDataService: MockTrackDataService(sessionService: MockSessionService())
         )
     )

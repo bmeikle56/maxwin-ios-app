@@ -29,7 +29,8 @@ final class MainTabViewModel {
         authService: AuthServicing,
         sessionService: SessionServicing,
         trackDataService: TrackDataServicing,
-        settingsService: MockSettingsService
+        settingsService: MockSettingsService,
+        biometricService: BiometricAuthServicing = BiometricAuthService()
     ) {
         self.settingsService = settingsService
         self.sessionsViewModel = SessionsViewModel(
@@ -46,7 +47,8 @@ final class MainTabViewModel {
         self.settingsViewModel = SettingsViewModel(
             authService: authService,
             settingsService: settingsService,
-            trackDataService: trackDataService
+            trackDataService: trackDataService,
+            biometricService: biometricService
         )
 
         sessionsViewModel.onTrackDataChanged = { [weak trackViewModel] in

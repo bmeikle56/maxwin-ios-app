@@ -11,8 +11,11 @@ import Observation
 protocol AuthServicing: AnyObject {
     var currentUser: User? { get }
     var isAuthenticated: Bool { get }
+    /// True when a saved session exists but biometrics must unlock it first.
+    var isAwaitingBiometricUnlock: Bool { get }
 
     func signIn(with credentials: AuthCredentials) async throws -> User
+    func unlockWithBiometrics()
     func updateUsername(_ username: String) async throws -> User
     func updatePassword(current: String, new: String) async throws
     func updateAvatar(imageData: Data?) async throws -> User
@@ -30,6 +33,7 @@ final class MockAuthService: AuthServicing {
 
     private(set) var currentUser: User?
     private(set) var isAuthenticated: Bool
+    private(set) var isAwaitingBiometricUnlock = false
     private var storedPassword: String?
 
     /// Artificial delay so the UI can exercise loading states.
@@ -38,15 +42,25 @@ final class MockAuthService: AuthServicing {
     init(userDefaults: UserDefaults = .standard) {
         self.userDefaults = userDefaults
 
+        let biometricsEnabled = userDefaults.bool(forKey: BiometricAuthService.enabledKey)
+
         if userDefaults.bool(forKey: isAuthenticatedKey),
            let data = userDefaults.data(forKey: userKey),
            let user = try? JSONDecoder().decode(User.self, from: data) {
             self.currentUser = user
-            self.isAuthenticated = true
             self.storedPassword = userDefaults.string(forKey: passwordKey)
+            // When biometrics is on, keep the saved session but require unlock on open.
+            if biometricsEnabled {
+                self.isAuthenticated = false
+                self.isAwaitingBiometricUnlock = true
+            } else {
+                self.isAuthenticated = true
+                self.isAwaitingBiometricUnlock = false
+            }
         } else {
             self.currentUser = nil
             self.isAuthenticated = false
+            self.isAwaitingBiometricUnlock = false
             self.storedPassword = nil
         }
     }
@@ -59,9 +73,23 @@ final class MockAuthService: AuthServicing {
         }
 
         // Mock: accept any non-empty username/password pair.
-        let user = User(id: UUID(), username: credentials.trimmedUsername)
+        // Prefer restoring the existing user when unlocking a saved biometric session.
+        let user: User
+        if let currentUser,
+           currentUser.username.caseInsensitiveCompare(credentials.trimmedUsername) == .orderedSame {
+            user = currentUser
+        } else {
+            user = User(id: UUID(), username: credentials.trimmedUsername)
+        }
         persist(user: user, password: credentials.password)
         return user
+    }
+
+    func unlockWithBiometrics() {
+        guard currentUser != nil else { return }
+        isAuthenticated = true
+        isAwaitingBiometricUnlock = false
+        userDefaults.set(true, forKey: isAuthenticatedKey)
     }
 
     func updateUsername(_ username: String) async throws -> User {
@@ -153,6 +181,7 @@ final class MockAuthService: AuthServicing {
         currentUser = user
         storedPassword = password
         isAuthenticated = user != nil
+        isAwaitingBiometricUnlock = false
         if let user, let data = try? JSONEncoder().encode(user) {
             userDefaults.set(data, forKey: userKey)
         } else {

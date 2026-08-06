@@ -164,6 +164,26 @@ struct SettingsView: View {
             .tint(Color.white.opacity(0.45))
             .padding(.horizontal, 16)
             .padding(.vertical, 14)
+
+            if viewModel.canUseBiometrics {
+                Divider()
+                    .background(MaxwinTheme.fieldStroke)
+                    .padding(.leading, 16)
+
+                Toggle(isOn: Binding(
+                    get: { viewModel.biometricsEnabled },
+                    set: { newValue in
+                        viewModel.setBiometricsEnabled(newValue)
+                    }
+                )) {
+                    Text(viewModel.biometricsDisplayName)
+                        .font(.system(size: 16, weight: .medium, design: .rounded))
+                        .foregroundStyle(MaxwinTheme.cream)
+                }
+                .tint(Color.white.opacity(0.45))
+                .padding(.horizontal, 16)
+                .padding(.vertical, 14)
+            }
         }
         .background(MaxwinTheme.fieldFill, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay {

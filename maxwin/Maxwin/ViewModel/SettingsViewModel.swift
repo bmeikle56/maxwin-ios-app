@@ -25,6 +25,7 @@ final class SettingsViewModel {
     private let authService: AuthServicing
     private let settingsService: SettingsServicing
     private let trackDataService: TrackDataServicing
+    private let biometricService: BiometricAuthServicing
 
     var username: String {
         authService.currentUser?.username ?? "Player"
@@ -42,14 +43,28 @@ final class SettingsViewModel {
         settingsService.settings.condensedSessionsList
     }
 
+    var canUseBiometrics: Bool {
+        biometricService.canUseBiometrics
+    }
+
+    var biometricsEnabled: Bool {
+        biometricService.isBiometricsEnabled
+    }
+
+    var biometricsDisplayName: String {
+        biometricService.biometricsDisplayName
+    }
+
     init(
         authService: AuthServicing,
         settingsService: SettingsServicing,
-        trackDataService: TrackDataServicing
+        trackDataService: TrackDataServicing,
+        biometricService: BiometricAuthServicing = BiometricAuthService()
     ) {
         self.authService = authService
         self.settingsService = settingsService
         self.trackDataService = trackDataService
+        self.biometricService = biometricService
         reloadAvatar()
     }
 
@@ -88,6 +103,10 @@ final class SettingsViewModel {
 
     func setCondensedSessionsList(_ enabled: Bool) {
         settingsService.updateCondensedSessionsList(enabled)
+    }
+
+    func setBiometricsEnabled(_ enabled: Bool) {
+        biometricService.setBiometricsEnabled(enabled)
     }
 
     func makeEditProfileViewModel() -> EditProfileViewModel {

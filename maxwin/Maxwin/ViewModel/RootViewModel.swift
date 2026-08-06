@@ -12,6 +12,7 @@ import Observation
 @MainActor
 final class RootViewModel {
     let authService: MockAuthService
+    let biometricService: BiometricAuthService
     let onboardingService: MockOnboardingService
     let settingsService: MockSettingsService
     let sessionService: MockSessionService
@@ -23,6 +24,7 @@ final class RootViewModel {
 
     init(
         authService: MockAuthService = MockAuthService(),
+        biometricService: BiometricAuthService = BiometricAuthService(),
         onboardingService: MockOnboardingService = MockOnboardingService(),
         settingsService: MockSettingsService = MockSettingsService(),
         sessionService: MockSessionService = MockSessionService(),
@@ -31,6 +33,7 @@ final class RootViewModel {
         let trackData = trackDataService ?? MockTrackDataService(sessionService: sessionService)
 
         self.authService = authService
+        self.biometricService = biometricService
         self.onboardingService = onboardingService
         self.settingsService = settingsService
         self.sessionService = sessionService
@@ -39,13 +42,15 @@ final class RootViewModel {
         self.onboardingViewModel = OnboardingViewModel(onboardingService: onboardingService)
         self.loginViewModel = LoginViewModel(
             authService: authService,
+            biometricService: biometricService,
             trackDataService: trackData
         )
         self.mainTabViewModel = MainTabViewModel(
             authService: authService,
             sessionService: sessionService,
             trackDataService: trackData,
-            settingsService: settingsService
+            settingsService: settingsService,
+            biometricService: biometricService
         )
 
         // Restored sessions should warm the Track cache before the tab appears.
