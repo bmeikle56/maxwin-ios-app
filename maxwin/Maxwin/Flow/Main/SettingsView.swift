@@ -28,6 +28,12 @@ struct SettingsView: View {
                             .font(.system(size: 13, weight: .medium, design: .rounded))
                             .foregroundStyle(MaxwinTheme.lossRed)
                     }
+
+                    DisclaimerView(content: "Privacy policy") {
+                        PrivacyPolicyView()
+                    }
+                    .padding(.top, 8)
+                    .frame(maxWidth: .infinity, alignment: .center)
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
