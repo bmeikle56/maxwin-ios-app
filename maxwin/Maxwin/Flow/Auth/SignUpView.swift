@@ -1,40 +1,32 @@
 //
-//  LoginView.swift
+//  SignUpView.swift
 //  Maxwin
 //
-//  Created by Braeden Meikle on 8/3/26.
+//  Created by Braeden Meikle on 8/6/26.
 //
 
 import SwiftUI
 
-struct LoginView: View {
-    @Bindable var viewModel: LoginViewModel
-    var signUpViewModel: SignUpViewModel
+struct SignUpView: View {
+    @Bindable var viewModel: SignUpViewModel
+    @Environment(\.dismiss) private var dismiss
     @FocusState private var focusedField: Field?
 
     private enum Field {
-        case username, password
+        case username, password, confirmPassword
     }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 header
-                    .padding(.top, 56)
+                    .padding(.top, 24)
                     .padding(.bottom, 40)
 
                 formFields
 
-                forgotPasswordLink
-                    .padding(.top, 12)
-
-                signInButton
+                signUpButton
                     .padding(.top, 28)
-
-                if viewModel.canOfferBiometricLogin {
-                    biometricButton
-                        .padding(.top, 14)
-                }
 
                 if let errorMessage = viewModel.errorMessage {
                     Text(errorMessage)
@@ -44,7 +36,7 @@ struct LoginView: View {
                         .transition(.opacity)
                 }
 
-                signUpLink
+                signInLink
                     .padding(.top, 28)
                     .frame(maxWidth: .infinity)
             }
@@ -54,24 +46,29 @@ struct LoginView: View {
         .scrollDismissesKeyboard(.interactively)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .feltScreenBackground()
-        .toolbar(.hidden, for: .navigationBar)
-        .task {
-            await viewModel.prepareOnAppear()
+        .navigationBarBackButtonHidden(true)
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button {
+                    dismiss()
+                } label: {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(MaxwinTheme.cream)
+                }
+                .disabled(viewModel.isLoading)
+            }
         }
-        .alert("Forgot password", isPresented: $viewModel.showForgotPasswordAlert) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text(viewModel.forgotPasswordMessage)
-        }
+        .toolbarBackground(.hidden, for: .navigationBar)
     }
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Maxwin")
-                .font(.system(size: 40, weight: .bold, design: .serif))
+            Text("Create account")
+                .font(.system(size: 34, weight: .bold, design: .serif))
                 .foregroundStyle(MaxwinTheme.cream)
 
-            Text("Sign in to track your poker earnings.")
+            Text("Sign up to start tracking your poker earnings.")
                 .font(.system(size: 17, weight: .medium, design: .rounded))
                 .foregroundStyle(MaxwinTheme.mutedCream)
         }
@@ -95,33 +92,31 @@ struct LoginView: View {
                 text: $viewModel.password,
                 field: .password,
                 isSecure: true,
-                contentType: .password,
+                contentType: .newPassword,
+                submitLabel: .next
+            ) {
+                focusedField = .confirmPassword
+            }
+
+            authField(
+                title: "Confirm password",
+                text: $viewModel.confirmPassword,
+                field: .confirmPassword,
+                isSecure: true,
+                contentType: .newPassword,
                 submitLabel: .go
             ) {
-                Task { await attemptSignIn() }
+                Task { await attemptSignUp() }
             }
         }
     }
 
-    private var forgotPasswordLink: some View {
+    private var signUpButton: some View {
         Button {
-            viewModel.forgotPasswordTapped()
-        } label: {
-            Text("Forgot your password?")
-                .font(.system(size: 14, weight: .medium, design: .rounded))
-                .foregroundStyle(MaxwinTheme.gold)
-                .underline()
-        }
-        .buttonStyle(.plain)
-        .disabled(viewModel.isLoading || viewModel.isBiometricUnlockInProgress)
-    }
-
-    private var signInButton: some View {
-        Button {
-            Task { await attemptSignIn() }
+            Task { await attemptSignUp() }
         } label: {
             ZStack {
-                Text("Sign In")
+                Text("Sign Up")
                     .opacity(viewModel.isLoading ? 0 : 1)
 
                 if viewModel.isLoading {
@@ -136,57 +131,23 @@ struct LoginView: View {
             .background(MaxwinTheme.gold, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         }
         .buttonStyle(.plain)
-        .disabled(viewModel.isLoading || viewModel.isBiometricUnlockInProgress)
+        .disabled(viewModel.isLoading)
     }
 
-    private var biometricButton: some View {
+    private var signInLink: some View {
         Button {
-            Task { await viewModel.unlockWithBiometrics() }
-        } label: {
-            HStack(spacing: 10) {
-                Image(systemName: biometricIconName)
-                    .font(.system(size: 18, weight: .semibold))
-                Text("Sign in with \(viewModel.biometricsDisplayName)")
-                    .font(.system(size: 16, weight: .semibold, design: .rounded))
-            }
-            .foregroundStyle(MaxwinTheme.cream)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 15)
-            .background(MaxwinTheme.fieldFill, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .strokeBorder(MaxwinTheme.fieldStroke, lineWidth: 1)
-            }
-        }
-        .buttonStyle(.plain)
-        .disabled(viewModel.isLoading || viewModel.isBiometricUnlockInProgress)
-    }
-
-    private var biometricIconName: String {
-        switch viewModel.biometricsDisplayName {
-        case "Touch ID":
-            return "touchid"
-        case "Optic ID":
-            return "opticid"
-        default:
-            return "faceid"
-        }
-    }
-
-    private var signUpLink: some View {
-        NavigationLink {
-            SignUpView(viewModel: signUpViewModel)
+            dismiss()
         } label: {
             (
-                Text("Don’t have an account? ")
+                Text("Already have an account? ")
                     .foregroundStyle(MaxwinTheme.mutedCream)
-                + Text("Sign up")
+                + Text("Sign in")
                     .foregroundStyle(MaxwinTheme.gold)
             )
             .font(.system(size: 14, weight: .medium, design: .rounded))
         }
         .buttonStyle(.plain)
-        .disabled(viewModel.isLoading || viewModel.isBiometricUnlockInProgress)
+        .disabled(viewModel.isLoading)
     }
 
     private func authField(
@@ -218,7 +179,7 @@ struct LoginView: View {
             .focused($focusedField, equals: field)
             .submitLabel(submitLabel)
             .onSubmit(onSubmit)
-            .disabled(viewModel.isLoading || viewModel.isBiometricUnlockInProgress)
+            .disabled(viewModel.isLoading)
             .padding(.horizontal, 14)
             .padding(.vertical, 14)
             .background(MaxwinTheme.fieldFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
@@ -232,21 +193,16 @@ struct LoginView: View {
         }
     }
 
-    private func attemptSignIn() async {
+    private func attemptSignUp() async {
         focusedField = nil
-        await viewModel.signIn()
+        await viewModel.signUp()
     }
 }
 
 #Preview {
     NavigationStack {
-        LoginView(
-            viewModel: LoginViewModel(
-                authService: MockAuthService(),
-                biometricService: BiometricAuthService(),
-                trackDataService: MockTrackDataService(sessionService: MockSessionService())
-            ),
-            signUpViewModel: SignUpViewModel(
+        SignUpView(
+            viewModel: SignUpViewModel(
                 authService: MockAuthService(),
                 biometricService: BiometricAuthService(),
                 trackDataService: MockTrackDataService(sessionService: MockSessionService())

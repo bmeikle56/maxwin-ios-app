@@ -15,6 +15,7 @@ protocol AuthServicing: AnyObject {
     var isAwaitingBiometricUnlock: Bool { get }
 
     func signIn(with credentials: AuthCredentials) async throws -> User
+    func signUp(with credentials: AuthCredentials) async throws -> User
     func unlockWithBiometrics()
     func updateUsername(_ username: String) async throws -> User
     func updatePassword(current: String, new: String) async throws
@@ -81,6 +82,19 @@ final class MockAuthService: AuthServicing {
         } else {
             user = User(id: UUID(), username: credentials.trimmedUsername)
         }
+        persist(user: user, password: credentials.password)
+        return user
+    }
+
+    func signUp(with credentials: AuthCredentials) async throws -> User {
+        try await Task.sleep(nanoseconds: networkDelayNanoseconds)
+
+        guard credentials.isValid else {
+            throw AuthError.emptyFields
+        }
+
+        // Mock: create a fresh account for any valid credentials.
+        let user = User(id: UUID(), username: credentials.trimmedUsername)
         persist(user: user, password: credentials.password)
         return user
     }

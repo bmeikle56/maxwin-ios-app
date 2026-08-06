@@ -12,6 +12,7 @@ struct RootView: View {
 
     var body: some View {
         @Bindable var loginViewModel = viewModel.loginViewModel
+        @Bindable var signUpViewModel = viewModel.signUpViewModel
 
         Group {
             if !viewModel.onboardingService.hasCompletedOnboarding {
@@ -19,7 +20,12 @@ struct RootView: View {
             } else if viewModel.authService.isAuthenticated {
                 MainTabView(viewModel: viewModel.mainTabViewModel)
             } else {
-                LoginView(viewModel: loginViewModel)
+                NavigationStack {
+                    LoginView(
+                        viewModel: loginViewModel,
+                        signUpViewModel: signUpViewModel
+                    )
+                }
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -27,18 +33,48 @@ struct RootView: View {
         .animation(.easeInOut(duration: 0.35), value: viewModel.onboardingService.hasCompletedOnboarding)
         .animation(.easeInOut(duration: 0.35), value: viewModel.authService.isAuthenticated)
         .alert(
-            "Enable \(loginViewModel.biometricsDisplayName)?",
-            isPresented: $loginViewModel.showBiometricsPrompt
+            "Enable \(biometricsDisplayName)?",
+            isPresented: biometricsPromptBinding
         ) {
             Button("Enable") {
-                loginViewModel.enableBiometricsFromPrompt()
+                if loginViewModel.showBiometricsPrompt {
+                    loginViewModel.enableBiometricsFromPrompt()
+                } else {
+                    signUpViewModel.enableBiometricsFromPrompt()
+                }
             }
             Button("Not Now", role: .cancel) {
-                loginViewModel.declineBiometricsFromPrompt()
+                if loginViewModel.showBiometricsPrompt {
+                    loginViewModel.declineBiometricsFromPrompt()
+                } else {
+                    signUpViewModel.declineBiometricsFromPrompt()
+                }
             }
         } message: {
-            Text("Use \(loginViewModel.biometricsDisplayName) to sign in quickly the next time you open Maxwin.")
+            Text("Use \(biometricsDisplayName) to sign in quickly the next time you open Maxwin.")
         }
+    }
+
+    private var biometricsDisplayName: String {
+        if viewModel.loginViewModel.showBiometricsPrompt {
+            return viewModel.loginViewModel.biometricsDisplayName
+        }
+        return viewModel.signUpViewModel.biometricsDisplayName
+    }
+
+    private var biometricsPromptBinding: Binding<Bool> {
+        Binding(
+            get: {
+                viewModel.loginViewModel.showBiometricsPrompt
+                    || viewModel.signUpViewModel.showBiometricsPrompt
+            },
+            set: { isPresented in
+                if !isPresented {
+                    viewModel.loginViewModel.showBiometricsPrompt = false
+                    viewModel.signUpViewModel.showBiometricsPrompt = false
+                }
+            }
+        )
     }
 }
 

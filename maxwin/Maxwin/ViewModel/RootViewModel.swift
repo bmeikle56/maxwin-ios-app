@@ -20,6 +20,7 @@ final class RootViewModel {
 
     let onboardingViewModel: OnboardingViewModel
     let loginViewModel: LoginViewModel
+    let signUpViewModel: SignUpViewModel
     let mainTabViewModel: MainTabViewModel
 
     init(
@@ -41,6 +42,11 @@ final class RootViewModel {
 
         self.onboardingViewModel = OnboardingViewModel(onboardingService: onboardingService)
         self.loginViewModel = LoginViewModel(
+            authService: authService,
+            biometricService: biometricService,
+            trackDataService: trackData
+        )
+        self.signUpViewModel = SignUpViewModel(
             authService: authService,
             biometricService: biometricService,
             trackDataService: trackData
