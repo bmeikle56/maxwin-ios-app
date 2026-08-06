@@ -11,46 +11,37 @@ import SwiftUI
 struct EditProfileView: View {
     @Bindable var viewModel: EditProfileViewModel
     @Environment(\.dismiss) private var dismiss
-    @FocusState private var isUsernameFocused: Bool
+    @FocusState private var focusedField: Field?
     @State private var photoPickerItem: PhotosPickerItem?
+
+    private enum Field {
+        case username, currentPassword, newPassword, confirmPassword
+    }
 
     var body: some View {
         ScrollView {
             VStack(spacing: 24) {
                 avatar
 
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Username")
-                        .font(.system(size: 13, weight: .semibold, design: .rounded))
-                        .foregroundStyle(MaxwinTheme.mutedCream)
-
+                profileField(
+                    title: "Username",
+                    field: .username
+                ) {
                     TextField(
                         "",
                         text: $viewModel.username,
                         prompt: Text("Username").foregroundStyle(MaxwinTheme.cream.opacity(0.35))
                     )
-                    .font(.system(size: 16, weight: .regular, design: .rounded))
-                    .foregroundStyle(MaxwinTheme.cream)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     .textContentType(.username)
-                    .focused($isUsernameFocused)
-                    .submitLabel(.done)
+                    .submitLabel(.next)
                     .onSubmit {
-                        Task { await saveIfNeeded() }
-                    }
-                    .disabled(viewModel.isSaving)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 14)
-                    .background(MaxwinTheme.fieldFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .strokeBorder(
-                                isUsernameFocused ? MaxwinTheme.gold.opacity(0.7) : MaxwinTheme.fieldStroke,
-                                lineWidth: 1
-                            )
+                        focusedField = .currentPassword
                     }
                 }
+
+                passwordSection
 
                 if let errorMessage = viewModel.errorMessage {
                     Text(errorMessage)
@@ -101,6 +92,66 @@ struct EditProfileView: View {
         }
     }
 
+    private var passwordSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            profileField(
+                title: "Current password",
+                field: .currentPassword
+            ) {
+                SecureField(
+                    "",
+                    text: $viewModel.currentPassword,
+                    prompt: Text("Current password").foregroundStyle(MaxwinTheme.cream.opacity(0.35))
+                )
+                .textContentType(.password)
+                .submitLabel(.next)
+                .onSubmit {
+                    if viewModel.hasEnteredCurrentPassword {
+                        focusedField = .newPassword
+                    }
+                }
+            }
+
+            if viewModel.hasEnteredCurrentPassword {
+                profileField(
+                    title: "New password",
+                    field: .newPassword
+                ) {
+                    SecureField(
+                        "",
+                        text: $viewModel.newPassword,
+                        prompt: Text("New password").foregroundStyle(MaxwinTheme.cream.opacity(0.35))
+                    )
+                    .textContentType(.newPassword)
+                    .submitLabel(.next)
+                    .onSubmit {
+                        if viewModel.hasEnteredNewPassword {
+                            focusedField = .confirmPassword
+                        }
+                    }
+                }
+
+                if viewModel.hasEnteredNewPassword {
+                    profileField(
+                        title: "Confirm new password",
+                        field: .confirmPassword
+                    ) {
+                        SecureField(
+                            "",
+                            text: $viewModel.confirmPassword,
+                            prompt: Text("Confirm new password").foregroundStyle(MaxwinTheme.cream.opacity(0.35))
+                        )
+                        .textContentType(.newPassword)
+                        .submitLabel(.done)
+                        .onSubmit {
+                            Task { await saveIfNeeded() }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     private var avatar: some View {
         let avatarImage = viewModel.avatarImage
         let isUpdatingAvatar = viewModel.isUpdatingAvatar
@@ -135,9 +186,37 @@ struct EditProfileView: View {
         .padding(.vertical, 8)
     }
 
+    private func profileField<Content: View>(
+        title: String,
+        field: Field,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                .foregroundStyle(MaxwinTheme.mutedCream)
+
+            content()
+                .font(.system(size: 16, weight: .regular, design: .rounded))
+                .foregroundStyle(MaxwinTheme.cream)
+                .focused($focusedField, equals: field)
+                .disabled(viewModel.isSaving)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 14)
+                .background(MaxwinTheme.fieldFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .strokeBorder(
+                            focusedField == field ? MaxwinTheme.gold.opacity(0.7) : MaxwinTheme.fieldStroke,
+                            lineWidth: 1
+                        )
+                }
+        }
+    }
+
     private func saveIfNeeded() async {
         guard viewModel.canSave else { return }
-        isUsernameFocused = false
+        focusedField = nil
         if await viewModel.save() {
             dismiss()
         }

@@ -14,6 +14,7 @@ protocol AuthServicing: AnyObject {
 
     func signIn(with credentials: AuthCredentials) async throws -> User
     func updateUsername(_ username: String) async throws -> User
+    func updatePassword(current: String, new: String) async throws
     func updateAvatar(imageData: Data?) async throws -> User
     func signOut() async
     func deleteAccount() async throws
@@ -24,10 +25,12 @@ protocol AuthServicing: AnyObject {
 final class MockAuthService: AuthServicing {
     private let userDefaults: UserDefaults
     private let userKey = "auth.currentUser"
+    private let passwordKey = "auth.password"
     private let isAuthenticatedKey = "auth.isAuthenticated"
 
     private(set) var currentUser: User?
     private(set) var isAuthenticated: Bool
+    private var storedPassword: String?
 
     /// Artificial delay so the UI can exercise loading states.
     var networkDelayNanoseconds: UInt64 = 450_000_000
@@ -40,9 +43,11 @@ final class MockAuthService: AuthServicing {
            let user = try? JSONDecoder().decode(User.self, from: data) {
             self.currentUser = user
             self.isAuthenticated = true
+            self.storedPassword = userDefaults.string(forKey: passwordKey)
         } else {
             self.currentUser = nil
             self.isAuthenticated = false
+            self.storedPassword = nil
         }
     }
 
@@ -55,7 +60,7 @@ final class MockAuthService: AuthServicing {
 
         // Mock: accept any non-empty username/password pair.
         let user = User(id: UUID(), username: credentials.trimmedUsername)
-        persist(user: user)
+        persist(user: user, password: credentials.password)
         return user
     }
 
@@ -75,8 +80,27 @@ final class MockAuthService: AuthServicing {
             username: trimmed,
             avatarFileName: currentUser.avatarFileName
         )
-        persist(user: updated)
+        persist(user: updated, password: storedPassword)
         return updated
+    }
+
+    func updatePassword(current: String, new: String) async throws {
+        try await Task.sleep(nanoseconds: networkDelayNanoseconds)
+
+        guard currentUser != nil else {
+            throw AuthError.unknown
+        }
+        guard !current.isEmpty, !new.isEmpty else {
+            throw AuthError.emptyFields
+        }
+
+        // Sessions signed in before password persistence have no stored password;
+        // accept any non-empty current password in that case.
+        if let storedPassword, storedPassword != current {
+            throw AuthError.incorrectPassword
+        }
+
+        persist(user: currentUser, password: new)
     }
 
     func updateAvatar(imageData: Data?) async throws -> User {
@@ -100,7 +124,7 @@ final class MockAuthService: AuthServicing {
             username: currentUser.username,
             avatarFileName: fileName
         )
-        persist(user: updated)
+        persist(user: updated, password: storedPassword)
         return updated
     }
 
@@ -125,20 +149,25 @@ final class MockAuthService: AuthServicing {
         // Mock: always succeeds once a username is provided.
     }
 
-    private func persist(user: User) {
+    private func persist(user: User?, password: String?) {
         currentUser = user
-        isAuthenticated = true
-        if let data = try? JSONEncoder().encode(user) {
+        storedPassword = password
+        isAuthenticated = user != nil
+        if let user, let data = try? JSONEncoder().encode(user) {
             userDefaults.set(data, forKey: userKey)
+        } else {
+            userDefaults.removeObject(forKey: userKey)
         }
-        userDefaults.set(true, forKey: isAuthenticatedKey)
+        if let password {
+            userDefaults.set(password, forKey: passwordKey)
+        } else {
+            userDefaults.removeObject(forKey: passwordKey)
+        }
+        userDefaults.set(isAuthenticated, forKey: isAuthenticatedKey)
     }
 
     private func clearSession() {
         ProfileAvatarStore.delete(fileName: currentUser?.avatarFileName)
-        currentUser = nil
-        isAuthenticated = false
-        userDefaults.removeObject(forKey: userKey)
-        userDefaults.set(false, forKey: isAuthenticatedKey)
+        persist(user: nil, password: nil)
     }
 }

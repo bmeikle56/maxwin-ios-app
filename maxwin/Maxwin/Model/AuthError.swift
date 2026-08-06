@@ -10,6 +10,7 @@ import Foundation
 enum AuthError: LocalizedError, Equatable {
     case invalidCredentials
     case emptyFields
+    case incorrectPassword
     case networkUnavailable
     case unknown
 
@@ -19,6 +20,8 @@ enum AuthError: LocalizedError, Equatable {
             return "Incorrect username or password."
         case .emptyFields:
             return "Enter a username and password to continue."
+        case .incorrectPassword:
+            return "Current password is incorrect."
         case .networkUnavailable:
             return "Unable to reach the server. Try again."
         case .unknown:

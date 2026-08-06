@@ -15,6 +15,9 @@ import UIKit
 @MainActor
 final class EditProfileViewModel {
     var username: String
+    var currentPassword = ""
+    var newPassword = ""
+    var confirmPassword = ""
     var avatarImage: UIImage?
     var isSaving = false
     var isUpdatingAvatar = false
@@ -23,9 +26,40 @@ final class EditProfileViewModel {
     private let authService: AuthServicing
     private let originalUsername: String
 
+    var hasEnteredCurrentPassword: Bool {
+        !currentPassword.isEmpty
+    }
+
+    var hasEnteredNewPassword: Bool {
+        !newPassword.isEmpty
+    }
+
+    var isChangingPassword: Bool {
+        !currentPassword.isEmpty || !newPassword.isEmpty || !confirmPassword.isEmpty
+    }
+
+    var isPasswordChangeValid: Bool {
+        !currentPassword.isEmpty
+            && !newPassword.isEmpty
+            && newPassword == confirmPassword
+    }
+
+    private var trimmedUsername: String {
+        username.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var hasUsernameChange: Bool {
+        !trimmedUsername.isEmpty && trimmedUsername != originalUsername
+    }
+
     var canSave: Bool {
-        let trimmed = username.trimmingCharacters(in: .whitespacesAndNewlines)
-        return !trimmed.isEmpty && trimmed != originalUsername && !isSaving
+        guard !isSaving, !trimmedUsername.isEmpty else { return false }
+
+        if isChangingPassword {
+            return isPasswordChangeValid
+        }
+
+        return hasUsernameChange
     }
 
     init(authService: AuthServicing) {
@@ -62,15 +96,34 @@ final class EditProfileViewModel {
     /// Returns `true` when the profile was saved successfully.
     @discardableResult
     func save() async -> Bool {
+        guard canSave else { return false }
+
         isSaving = true
         errorMessage = nil
         defer { isSaving = false }
 
         do {
-            _ = try await authService.updateUsername(username)
+            if hasUsernameChange {
+                _ = try await authService.updateUsername(username)
+            }
+
+            if isChangingPassword {
+                guard newPassword == confirmPassword else {
+                    errorMessage = "New passwords don’t match."
+                    return false
+                }
+                try await authService.updatePassword(current: currentPassword, new: newPassword)
+                currentPassword = ""
+                newPassword = ""
+                confirmPassword = ""
+            }
+
             return true
         } catch AuthError.emptyFields {
-            errorMessage = "Enter a username to continue."
+            errorMessage = "Fill in all required fields to continue."
+            return false
+        } catch AuthError.incorrectPassword {
+            errorMessage = AuthError.incorrectPassword.localizedDescription
             return false
         } catch {
             errorMessage = "Couldn't update profile. Try again."
