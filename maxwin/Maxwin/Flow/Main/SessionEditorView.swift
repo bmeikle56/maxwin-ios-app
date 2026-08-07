@@ -220,7 +220,6 @@ struct SessionEditorView: View {
                     )
                     .keyboardType(.numberPad)
                     TextField("Villain hand", text: hand.villainHand)
-                    TextField("All-in street", text: hand.allInStreet)
                     TextField(
                         "Streets (one per line: Flop: Bet $40)",
                         text: hand.streetsText,

@@ -291,9 +291,6 @@ struct SessionDetailView: View {
             if let villainHand = detail.villainHand, !villainHand.isEmpty {
                 detailLine(title: "Villain", value: villainHand)
             }
-            if let allInStreet = detail.allInStreet, !allInStreet.isEmpty {
-                detailLine(title: "All-in", value: allInStreet)
-            }
 
             if let streets = detail.streets, !streets.isEmpty {
                 Text("Streets")

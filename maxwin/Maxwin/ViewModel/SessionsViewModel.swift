@@ -32,42 +32,15 @@ struct SessionWeekGroup: Identifiable, Equatable {
     }
 }
 
-enum SessionFilterChip: String, CaseIterable, Identifiable, Hashable {
-    case cash
-    case tournament
-    case live
-    case online
-    case nlh
-    case plo
-
-    var id: String { rawValue }
-
-    var title: String {
-        switch self {
-        case .cash: return "Cash"
-        case .tournament: return "Tournament"
-        case .live: return "Live"
-        case .online: return "Online"
-        case .nlh: return "NLH"
-        case .plo: return "PLO"
-        }
-    }
-
-    /// Cream chips for Online / Tournament / PLO; felt green for Live / Cash / NLH.
-    var usesCreamStyle: Bool {
-        switch self {
-        case .online, .tournament, .plo: return true
-        case .live, .cash, .nlh: return false
-        }
-    }
-}
-
 @Observable
 @MainActor
 final class SessionsViewModel {
     var sessions: [PokerSession] = []
     var searchText = ""
-    var activeFilters: Set<SessionFilterChip> = []
+    /// Optional single-select filters (same dimensions as live session setup).
+    var filterGameType: GameType?
+    var filterPokerVariant: PokerVariant?
+    var filterPlayEnvironment: PlayEnvironment?
     var condensedListEnabled: Bool
     var isLoading = false
     var isLoadingMore = false
@@ -97,7 +70,7 @@ final class SessionsViewModel {
     }
 
     var hasActiveFilters: Bool {
-        !activeFilters.isEmpty
+        filterGameType != nil || filterPokerVariant != nil || filterPlayEnvironment != nil
     }
 
     var sessionsByWeek: [SessionWeekGroup] {
@@ -150,25 +123,30 @@ final class SessionsViewModel {
         await reload(reset: false)
     }
 
-    func toggleFilter(_ chip: SessionFilterChip) {
-        if activeFilters.contains(chip) {
-            activeFilters.remove(chip)
-        } else {
-            activeFilters.insert(chip)
-        }
-        sessions = []
-        hasMore = false
-        nextOffset = 0
-        Task { await reload(reset: true) }
+    func setFilterGameType(_ value: GameType?) {
+        guard filterGameType != value else { return }
+        filterGameType = value
+        applyFilterChange()
+    }
+
+    func setFilterPokerVariant(_ value: PokerVariant?) {
+        guard filterPokerVariant != value else { return }
+        filterPokerVariant = value
+        applyFilterChange()
+    }
+
+    func setFilterPlayEnvironment(_ value: PlayEnvironment?) {
+        guard filterPlayEnvironment != value else { return }
+        filterPlayEnvironment = value
+        applyFilterChange()
     }
 
     func clearFilters() {
-        guard !activeFilters.isEmpty else { return }
-        activeFilters = []
-        sessions = []
-        hasMore = false
-        nextOffset = 0
-        Task { await reload(reset: true) }
+        guard hasActiveFilters else { return }
+        filterGameType = nil
+        filterPokerVariant = nil
+        filterPlayEnvironment = nil
+        applyFilterChange()
     }
 
     func beginCreateSession() {
@@ -242,6 +220,13 @@ final class SessionsViewModel {
         }
     }
 
+    private func applyFilterChange() {
+        sessions = []
+        hasMore = false
+        nextOffset = 0
+        Task { await reload(reset: true) }
+    }
+
     private func reload(reset: Bool) async {
         if reset {
             guard !isLoading else { return }
@@ -264,9 +249,9 @@ final class SessionsViewModel {
             offset: offset,
             limit: pageSize,
             searchText: searchText,
-            gameTypes: selectedGameTypes,
-            playEnvironments: selectedPlayEnvironments,
-            pokerVariants: selectedPokerVariants
+            gameTypes: filterGameType.map { [$0] } ?? [],
+            playEnvironments: filterPlayEnvironment.map { [$0] } ?? [],
+            pokerVariants: filterPokerVariant.map { [$0] } ?? []
         )
 
         do {
@@ -286,27 +271,6 @@ final class SessionsViewModel {
                 errorMessage = "Couldn't load more sessions."
             }
         }
-    }
-
-    private var selectedGameTypes: Set<GameType> {
-        var types: Set<GameType> = []
-        if activeFilters.contains(.cash) { types.insert(.cash) }
-        if activeFilters.contains(.tournament) { types.insert(.tournament) }
-        return types
-    }
-
-    private var selectedPlayEnvironments: Set<PlayEnvironment> {
-        var environments: Set<PlayEnvironment> = []
-        if activeFilters.contains(.live) { environments.insert(.live) }
-        if activeFilters.contains(.online) { environments.insert(.online) }
-        return environments
-    }
-
-    private var selectedPokerVariants: Set<PokerVariant> {
-        var variants: Set<PokerVariant> = []
-        if activeFilters.contains(.nlh) { variants.insert(.nlh) }
-        if activeFilters.contains(.plo) { variants.insert(.plo) }
-        return variants
     }
 
     private func refreshTrackCache() async {

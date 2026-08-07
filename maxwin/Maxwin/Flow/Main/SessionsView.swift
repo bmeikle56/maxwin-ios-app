@@ -9,6 +9,7 @@ import SwiftUI
 
 struct SessionsView: View {
     @Bindable var viewModel: SessionsViewModel
+    @State private var isFilterVisible = false
 
     private let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -26,10 +27,17 @@ struct SessionsView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                filterBar
+                filterToggleButton
                     .padding(.horizontal, 16)
                     .padding(.top, 4)
-                    .padding(.bottom, 8)
+                    .padding(.bottom, isFilterVisible ? 8 : 10)
+
+                if isFilterVisible {
+                    filterBar
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 8)
+                        .transition(.opacity.combined(with: .move(edge: .top)))
+                }
 
                 Group {
                     if viewModel.isLoading && viewModel.sessions.isEmpty {
@@ -53,9 +61,17 @@ struct SessionsView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .feltScreenBackground()
-            .navigationTitle("Sessions")
+            .animation(.easeInOut(duration: 0.2), value: isFilterVisible)
             .toolbar {
                 ToolbarItemGroup(placement: .topBarTrailing) {
+                    if viewModel.hasActiveFilters {
+                        Button("Clear") {
+                            viewModel.clearFilters()
+                        }
+                        .font(.system(size: 15, weight: .semibold, design: .rounded))
+                        .foregroundStyle(MaxwinTheme.gold)
+                    }
+
                     Button {
                         viewModel.beginLiveSession()
                     } label: {
@@ -108,64 +124,134 @@ struct SessionsView: View {
         }
     }
 
+    private var filterToggleButton: some View {
+        Button {
+            isFilterVisible.toggle()
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "line.3.horizontal.decrease.circle")
+                    .font(.system(size: 15, weight: .semibold))
+
+                Text(isFilterVisible ? "Hide Filters" : "Show Filters")
+                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+
+                if viewModel.hasActiveFilters {
+                    Circle()
+                        .fill(MaxwinTheme.gold)
+                        .frame(width: 7, height: 7)
+                }
+
+                Spacer(minLength: 0)
+
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 12, weight: .semibold))
+                    .rotationEffect(.degrees(isFilterVisible ? 180 : 0))
+            }
+            .foregroundStyle(
+                viewModel.hasActiveFilters || isFilterVisible
+                ? MaxwinTheme.gold
+                : MaxwinTheme.cream
+            )
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .background(
+                MaxwinTheme.translucentFill,
+                in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .strokeBorder(MaxwinTheme.fieldStroke, lineWidth: 1)
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(isFilterVisible ? "Hide filters" : "Show filters")
+    }
+
     private var filterBar: some View {
-        FlowLayout(spacing: 8, rowSpacing: 8) {
-            ForEach(SessionFilterChip.allCases) { chip in
-                filterChip(chip)
+        VStack(spacing: 12) {
+            filterSelectionPair(
+                options: GameType.allCases.map { ($0, $0.rawValue) },
+                selection: viewModel.filterGameType
+            ) { value in
+                viewModel.setFilterGameType(
+                    viewModel.filterGameType == value ? nil : value
+                )
             }
 
-            if viewModel.hasActiveFilters {
+            Rectangle()
+                .fill(MaxwinTheme.fieldStroke)
+                .frame(height: 1)
+                .padding(.horizontal, 4)
+
+            filterSelectionPair(
+                options: PokerVariant.allCases.map { ($0, $0.rawValue) },
+                selection: viewModel.filterPokerVariant
+            ) { value in
+                viewModel.setFilterPokerVariant(
+                    viewModel.filterPokerVariant == value ? nil : value
+                )
+            }
+
+            Rectangle()
+                .fill(MaxwinTheme.fieldStroke)
+                .frame(height: 1)
+                .padding(.horizontal, 4)
+
+            filterSelectionPair(
+                options: PlayEnvironment.allCases.map { ($0, $0.rawValue) },
+                selection: viewModel.filterPlayEnvironment
+            ) { value in
+                viewModel.setFilterPlayEnvironment(
+                    viewModel.filterPlayEnvironment == value ? nil : value
+                )
+            }
+        }
+        .padding(14)
+        .background(MaxwinTheme.translucentFill, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .strokeBorder(MaxwinTheme.fieldStroke, lineWidth: 1)
+        }
+    }
+
+    private func filterSelectionPair<Value: Hashable>(
+        options: [(Value, String)],
+        selection: Value?,
+        onSelect: @escaping (Value) -> Void
+    ) -> some View {
+        HStack(spacing: 12) {
+            ForEach(Array(options.enumerated()), id: \.offset) { _, option in
+                let (value, label) = option
+                let isSelected = selection == value
+
                 Button {
-                    viewModel.clearFilters()
+                    onSelect(value)
                 } label: {
-                    Text("Clear")
-                        .font(.system(size: 12, weight: .semibold, design: .rounded))
-                        .foregroundStyle(MaxwinTheme.gold)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 7)
+                    Text(label)
+                        .font(.system(size: 15, weight: .semibold, design: .rounded))
+                        .foregroundStyle(
+                            isSelected ? MaxwinTheme.feltDeep : MaxwinTheme.cream
+                        )
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(
+                            isSelected ? MaxwinTheme.cream : MaxwinTheme.translucentFill,
+                            in: RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        )
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .strokeBorder(
+                                    isSelected ? Color.clear : MaxwinTheme.fieldStroke,
+                                    lineWidth: 1
+                                )
+                        }
                 }
                 .buttonStyle(.plain)
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private func filterChip(_ chip: SessionFilterChip) -> some View {
-        let isSelected = viewModel.activeFilters.contains(chip)
-
-        return Button {
-            viewModel.toggleFilter(chip)
-        } label: {
-            Text(chip.title)
-                .font(.system(size: 12, weight: .bold, design: .rounded))
-                .foregroundStyle(filterChipForeground(chip: chip, isSelected: isSelected))
-                .padding(.horizontal, 12)
-                .padding(.vertical, 7)
-                .background(
-                    filterChipBackground(chip: chip, isSelected: isSelected),
-                    in: Capsule()
-                )
-                .overlay {
-                    Capsule()
-                        .strokeBorder(
-                            isSelected
-                            ? Color.clear
-                            : MaxwinTheme.fieldStroke,
-                            lineWidth: 1
-                        )
-                }
-        }
-        .buttonStyle(.plain)
-    }
-
-    private func filterChipForeground(chip: SessionFilterChip, isSelected: Bool) -> Color {
-        guard isSelected else { return MaxwinTheme.mutedCream }
-        return chip.usesCreamStyle ? MaxwinTheme.feltDeep : MaxwinTheme.cream
-    }
-
-    private func filterChipBackground(chip: SessionFilterChip, isSelected: Bool) -> Color {
-        guard isSelected else { return MaxwinTheme.fieldFill }
-        return chip.usesCreamStyle ? MaxwinTheme.cream : MaxwinTheme.badgeGreen
+        .frame(maxWidth: .infinity)
     }
 
     private var emptyState: some View {
@@ -284,7 +370,7 @@ struct SessionsView: View {
                         }
                     }
                 }
-                .background(MaxwinTheme.fieldFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .background(MaxwinTheme.translucentFill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                 .overlay {
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
                         .strokeBorder(MaxwinTheme.fieldStroke, lineWidth: 1)
@@ -339,7 +425,7 @@ struct SessionsView: View {
             SessionProfitText(profit: session.profit)
         }
         .padding(16)
-        .background(MaxwinTheme.fieldFill, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .background(MaxwinTheme.translucentFill, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: 16, style: .continuous)
                 .strokeBorder(MaxwinTheme.fieldStroke, lineWidth: 1)

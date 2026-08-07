@@ -321,7 +321,7 @@ final class MockSessionService: SessionServicing {
             PokerSession(
                 id: UUID(),
                 date: date(daysAgo: 20),
-                venue: "Online - Ignition",
+                venue: "Ignition",
                 gameType: .cash,
                 playEnvironment: .online,
                 stakes: "25NLH",
@@ -353,7 +353,7 @@ final class MockSessionService: SessionServicing {
             PokerSession(
                 id: UUID(),
                 date: date(daysAgo: 24),
-                venue: "Online - PokerStars",
+                venue: "PokerStars",
                 gameType: .cash,
                 playEnvironment: .online,
                 pokerVariant: .plo,
@@ -469,7 +469,7 @@ final class MockSessionService: SessionServicing {
             PokerSession(
                 id: UUID(),
                 date: date(daysAgo: 130),
-                venue: "Online - PokerStars",
+                venue: "PokerStars",
                 gameType: .cash,
                 playEnvironment: .online,
                 stakes: "50NLH",
@@ -484,7 +484,7 @@ final class MockSessionService: SessionServicing {
         ]
 
         // Extra lightweight sessions so list pagination is easy to exercise in mocks.
-        let venues = ["Bellagio", "ARIA", "Commerce", "The Bike", "Hustler", "Venetian", "Local home game", "Online - Ignition"]
+        let venues = ["Bellagio", "ARIA", "Commerce", "The Bike", "Hustler", "Venetian", "Local home game", "Ignition"]
         let stakes = ["200NLH", "300NLH", "500NLH", "1000NLH", "25NLH", "50NLH", "500PLO", "1000PLO", "50PLO"]
         let extras: [PokerSession] = (0..<20).map { index in
             let buyIn = Double([200, 300, 500, 800][index % 4])

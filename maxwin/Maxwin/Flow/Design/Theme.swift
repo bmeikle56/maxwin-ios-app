@@ -19,6 +19,8 @@ enum MaxwinTheme {
     static let fieldFill = Color(red: 0.04, green: 0.08, blue: 0.055)
     /// Opaque darker panel used for charts and inset cards.
     static let panelFill = Color(red: 0.012, green: 0.032, blue: 0.02)
+    /// Dark translucent wash so wallpaper shows through session cells / filters.
+    static let translucentFill = Color.black.opacity(0.55)
     static let fieldStroke = Color.white.opacity(0.16)
     /// Soft green divider that sits quietly on the felt.
     static let divider = Color(red: 0.10, green: 0.22, blue: 0.14)
