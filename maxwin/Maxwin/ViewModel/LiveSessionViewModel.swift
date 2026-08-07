@@ -26,9 +26,8 @@ final class LiveSessionViewModel {
     var handsPlayed = 0
     private(set) var loggedHands: [HandDraft] = []
 
-    /// Stakes for converting hand results into big blinds.
-    var smallBlind: Double?
-    var bigBlind: Double?
+    /// 100BB buy-in stake value (e.g. `200` for 1/2 → `200NLH`).
+    var stakes100BB: Double?
     /// Running total of big blinds won/lost from logged hand results.
     private(set) var bbWon: Double = 0
 
@@ -42,13 +41,18 @@ final class LiveSessionViewModel {
     var isSaving = false
     var errorMessage: String?
 
+    /// Big blind derived from the 100BB stake value.
+    var bigBlind: Double? {
+        guard let stakes100BB, stakes100BB > 0 else { return nil }
+        return stakes100BB / 100
+    }
+
     var hasProgress: Bool {
         hasStarted
             && (handsPlayed > 0
                 || !loggedHands.isEmpty
                 || hasCurrentHandInput
-                || smallBlind != nil
-                || bigBlind != nil
+                || stakes100BB != nil
                 || bbWon != 0
                 || accumulatedElapsed > 0
                 || (!isPaused && runningStartedAt.map { Date.now.timeIntervalSince($0) > 0 } == true))
@@ -87,17 +91,16 @@ final class LiveSessionViewModel {
 
     var canSave: Bool {
         guard hasStarted, isPaused else { return false }
-        guard let smallBlind, smallBlind > 0,
-              let bigBlind, bigBlind > 0 else { return false }
+        guard let stakes100BB, stakes100BB > 0 else { return false }
         return true
     }
 
-    /// Cash stakes label derived from the entered big blind (100BB notation).
+    /// Cash stakes label derived from the entered 100BB value.
     var stakesPreview: String? {
         guard gameType == .cash,
-              let bigBlind, bigBlind > 0,
+              let stakes100BB, stakes100BB > 0,
               let pokerVariant else { return nil }
-        return StakesParsing.formatCash(bigBlind: bigBlind, variant: pokerVariant)
+        return StakesParsing.formatCash(hundredBBBuyIn: stakes100BB, variant: pokerVariant)
     }
 
     /// Leaves the setup screen and begins the live timer.
@@ -163,9 +166,8 @@ final class LiveSessionViewModel {
         pause()
         commitPendingHandIfNeeded()
 
-        guard let smallBlind, smallBlind > 0,
-              let bigBlind, bigBlind > 0 else {
-            errorMessage = "Enter small blind and big blind."
+        guard let stakes100BB, stakes100BB > 0, let bigBlind else {
+            errorMessage = "Enter the 100BB stake value (e.g. 200 for 1/2)."
             return nil
         }
 
@@ -180,7 +182,7 @@ final class LiveSessionViewModel {
         let stakes: String
         switch gameType {
         case .cash:
-            stakes = StakesParsing.formatCash(bigBlind: bigBlind, variant: pokerVariant)
+            stakes = StakesParsing.formatCash(hundredBBBuyIn: stakes100BB, variant: pokerVariant)
         case .tournament:
             stakes = StakesParsing.formatTournament(buyIn: 0)
         }

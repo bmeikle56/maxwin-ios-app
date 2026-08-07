@@ -16,7 +16,7 @@ struct LiveSessionView: View {
     @FocusState private var focusedField: Field?
 
     private enum Field: Hashable {
-        case smallBlind, bigBlind, holeCard1, holeCard2, result, notes
+        case stakes100BB, holeCard1, holeCard2, result, notes
     }
 
     var body: some View {
@@ -260,42 +260,21 @@ struct LiveSessionView: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 12) {
                 HStack(spacing: 8) {
-                    Text("SB")
+                    Text("100 BB")
                         .font(.system(size: 13, weight: .medium, design: .rounded))
                         .foregroundStyle(MaxwinTheme.mutedCream)
 
                     TextField(
-                        "0",
-                        value: $viewModel.smallBlind,
+                        "200",
+                        value: $viewModel.stakes100BB,
                         format: .number.precision(.fractionLength(0...2))
                     )
                     .keyboardType(.decimalPad)
-                    .focused($focusedField, equals: .smallBlind)
+                    .focused($focusedField, equals: .stakes100BB)
                     .multilineTextAlignment(.trailing)
                     .font(.system(size: 16, weight: .semibold, design: .rounded))
                     .foregroundStyle(MaxwinTheme.cream)
-                    .frame(minWidth: 36, maxWidth: 56)
-                }
-                .padding(.horizontal, 10)
-                .padding(.vertical, fieldPadding)
-                .background(MaxwinTheme.panelFill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-
-                HStack(spacing: 8) {
-                    Text("BB")
-                        .font(.system(size: 13, weight: .medium, design: .rounded))
-                        .foregroundStyle(MaxwinTheme.mutedCream)
-
-                    TextField(
-                        "0",
-                        value: $viewModel.bigBlind,
-                        format: .number.precision(.fractionLength(0...2))
-                    )
-                    .keyboardType(.decimalPad)
-                    .focused($focusedField, equals: .bigBlind)
-                    .multilineTextAlignment(.trailing)
-                    .font(.system(size: 16, weight: .semibold, design: .rounded))
-                    .foregroundStyle(MaxwinTheme.cream)
-                    .frame(minWidth: 36, maxWidth: 56)
+                    .frame(minWidth: 52, maxWidth: 80)
                 }
                 .padding(.horizontal, 10)
                 .padding(.vertical, fieldPadding)

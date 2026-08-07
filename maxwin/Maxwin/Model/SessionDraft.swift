@@ -14,8 +14,8 @@ struct SessionDraft: Equatable {
     var gameType: GameType
     var playEnvironment: PlayEnvironment
     var pokerVariant: PokerVariant
-    var smallBlind: Double?
-    var bigBlind: Double?
+    /// 100BB buy-in stake value for cash games (e.g. `200` for 1/2 → `200NLH`).
+    var stakes100BB: Double?
     var durationMinutes: Int
     var buyIn: Double?
     var cashOut: Double?
@@ -31,8 +31,7 @@ struct SessionDraft: Equatable {
             gameType: .cash,
             playEnvironment: .live,
             pokerVariant: .nlh,
-            smallBlind: nil,
-            bigBlind: nil,
+            stakes100BB: nil,
             durationMinutes: 120,
             buyIn: nil,
             cashOut: nil,
@@ -47,9 +46,7 @@ struct SessionDraft: Equatable {
         gameType = session.gameType
         playEnvironment = session.playEnvironment
         pokerVariant = session.pokerVariant
-        let blinds = StakesParsing.smallAndBigBlind(from: session.stakes)
-        smallBlind = blinds?.small
-        bigBlind = blinds?.big
+        stakes100BB = StakesParsing.hundredBBBuyIn(from: session.stakes)
         durationMinutes = session.durationMinutes
         buyIn = session.buyIn
         cashOut = session.cashOut
@@ -63,8 +60,7 @@ struct SessionDraft: Equatable {
         gameType: GameType,
         playEnvironment: PlayEnvironment = .live,
         pokerVariant: PokerVariant = .nlh,
-        smallBlind: Double?,
-        bigBlind: Double?,
+        stakes100BB: Double?,
         durationMinutes: Int,
         buyIn: Double?,
         cashOut: Double?,
@@ -76,19 +72,19 @@ struct SessionDraft: Equatable {
         self.gameType = gameType
         self.playEnvironment = playEnvironment
         self.pokerVariant = pokerVariant
-        self.smallBlind = smallBlind
-        self.bigBlind = bigBlind
+        self.stakes100BB = stakes100BB
         self.durationMinutes = durationMinutes
         self.buyIn = buyIn
         self.cashOut = cashOut
         self.hands = hands
     }
 
-    func makeSession(buyIn: Double, cashOut: Double, smallBlind: Double, bigBlind: Double) -> PokerSession {
+    func makeSession(buyIn: Double, cashOut: Double) -> PokerSession {
         let stakes: String
         switch gameType {
         case .cash:
-            stakes = StakesParsing.formatCash(bigBlind: bigBlind, variant: pokerVariant)
+            let value = stakes100BB ?? 0
+            stakes = StakesParsing.formatCash(hundredBBBuyIn: value, variant: pokerVariant)
         case .tournament:
             stakes = StakesParsing.formatTournament(buyIn: buyIn)
         }
@@ -114,8 +110,8 @@ struct SessionDraft: Equatable {
     var stakesPreview: String? {
         switch gameType {
         case .cash:
-            guard let bigBlind, bigBlind > 0 else { return nil }
-            return StakesParsing.formatCash(bigBlind: bigBlind, variant: pokerVariant)
+            guard let stakes100BB, stakes100BB > 0 else { return nil }
+            return StakesParsing.formatCash(hundredBBBuyIn: stakes100BB, variant: pokerVariant)
         case .tournament:
             guard let buyIn, buyIn > 0 else { return nil }
             return StakesParsing.formatTournament(buyIn: buyIn)

@@ -62,32 +62,17 @@ final class SessionEditorViewModel {
             return false
         }
 
-        let smallBlind: Double
-        let bigBlind: Double
-        switch draft.gameType {
-        case .cash:
-            guard let enteredSmall = draft.smallBlind, let enteredBig = draft.bigBlind,
-                  enteredSmall > 0, enteredBig > 0 else {
-                errorMessage = "Enter small blind and big blind."
+        if draft.gameType == .cash {
+            guard let stakes100BB = draft.stakes100BB, stakes100BB > 0 else {
+                errorMessage = "Enter the 100BB stake value (e.g. 200 for 1/2)."
                 return false
             }
-            smallBlind = enteredSmall
-            bigBlind = enteredBig
-        case .tournament:
-            // Blinds are optional for tournaments; stakes are saved from buy-in.
-            smallBlind = draft.smallBlind ?? 0
-            bigBlind = draft.bigBlind ?? 0
         }
 
         isSaving = true
         defer { isSaving = false }
 
-        let session = draft.makeSession(
-            buyIn: buyIn,
-            cashOut: cashOut,
-            smallBlind: smallBlind,
-            bigBlind: bigBlind
-        )
+        let session = draft.makeSession(buyIn: buyIn, cashOut: cashOut)
 
         do {
             if draft.isEditing {

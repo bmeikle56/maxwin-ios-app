@@ -43,6 +43,7 @@ struct SessionsView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .feltScreenBackground()
+            .navigationTitle("Sessions")
             .toolbar {
                 ToolbarItemGroup(placement: .topBarTrailing) {
                     Button {

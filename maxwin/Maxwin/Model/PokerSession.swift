@@ -117,25 +117,25 @@ struct PokerSession: Identifiable, Equatable, Codable, Sendable {
 }
 
 enum StakesParsing {
+    /// 100BB buy-in amount from cash stake text (`200` from `200NLH`), or derived from legacy slash blinds.
+    static func hundredBBBuyIn(from stakes: String) -> Double? {
+        if let value = hundredBBBuyInIgnoringSlash(from: stakes) {
+            return value
+        }
+        guard let blinds = smallAndBigBlind(from: stakes) else { return nil }
+        return blinds.big * 100
+    }
+
     /// Extracts small and big blinds from cash stake text.
     /// Supports `200NLH` / `25NLH` / `500PLO` (100BB buy-in) and legacy `1/2 NL`.
     /// Returns nil for tournament buy-in / unknown formats.
     static func smallAndBigBlind(from stakes: String) -> (small: Double, big: Double)? {
-        let trimmed = stakes.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return nil }
-
-        if let coded = trimmed.range(
-            of: #"(\d+(?:\.\d+)?)\s*(NLH|PLO|NL)\b"#,
-            options: [.regularExpression, .caseInsensitive]
-        ) {
-            let match = String(trimmed[coded])
-            let digits = match.prefix { $0.isNumber || $0 == "." }
-            if let value = Double(digits), value > 0 {
-                let big = value / 100
-                return (big / 2, big)
-            }
+        if let buyIn = hundredBBBuyInIgnoringSlash(from: stakes) {
+            let big = buyIn / 100
+            return (big / 2, big)
         }
 
+        let trimmed = stakes.trimmingCharacters(in: .whitespacesAndNewlines)
         if let slash = trimmed.range(of: #"(\d+(?:\.\d+)?)\s*/\s*(\d+(?:\.\d+)?)"#, options: .regularExpression) {
             let match = String(trimmed[slash])
             let parts = match.split(whereSeparator: { $0 == "/" || $0.isWhitespace })
@@ -162,9 +162,9 @@ enum StakesParsing {
         return .nlh
     }
 
-    /// Formats cash stakes as 100BB buy-in notation, e.g. `1/2` → `200NLH`, `0.10/0.25` → `25NLH`.
-    static func formatCash(bigBlind: Double, variant: PokerVariant = .nlh) -> String {
-        "\(formatAmount(bigBlind * 100))\(variant.stakesSuffix)"
+    /// Formats cash stakes as 100BB buy-in notation, e.g. `200` → `200NLH`.
+    static func formatCash(hundredBBBuyIn: Double, variant: PokerVariant = .nlh) -> String {
+        "\(formatAmount(hundredBBBuyIn))\(variant.stakesSuffix)"
     }
 
     /// Formats tournament stakes as `$250 buy-in`.
@@ -173,9 +173,17 @@ enum StakesParsing {
         return "$\(formatAmount(buyIn)) buy-in"
     }
 
-    /// Legacy entry point used by call sites that still pass both blinds.
-    static func format(smallBlind: Double, bigBlind: Double, variant: PokerVariant = .nlh) -> String {
-        formatCash(bigBlind: bigBlind, variant: variant)
+    private static func hundredBBBuyInIgnoringSlash(from stakes: String) -> Double? {
+        let trimmed = stakes.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let coded = trimmed.range(
+            of: #"(\d+(?:\.\d+)?)\s*(NLH|PLO|NL)\b"#,
+            options: [.regularExpression, .caseInsensitive]
+        ) else { return nil }
+
+        let match = String(trimmed[coded])
+        let digits = match.prefix { $0.isNumber || $0 == "." }
+        guard let value = Double(digits), value > 0 else { return nil }
+        return value
     }
 
     private static func formatAmount(_ value: Double) -> String {

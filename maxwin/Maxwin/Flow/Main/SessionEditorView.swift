@@ -68,32 +68,19 @@ struct SessionEditorView: View {
 
             if viewModel.draft.gameType == .cash {
                 HStack(spacing: 10) {
-                    Text("Blinds")
+                    Text("100 BB")
                         .foregroundStyle(.primary)
 
                     Spacer(minLength: 8)
 
-                    Text("SB")
-                        .foregroundStyle(MaxwinTheme.mutedCream)
                     TextField(
-                        "0",
-                        value: $viewModel.draft.smallBlind,
+                        "200",
+                        value: $viewModel.draft.stakes100BB,
                         format: .number.precision(.fractionLength(0...2))
                     )
                     .keyboardType(.decimalPad)
                     .multilineTextAlignment(.trailing)
-                    .frame(minWidth: 44, maxWidth: 64)
-
-                    Text("BB")
-                        .foregroundStyle(MaxwinTheme.mutedCream)
-                    TextField(
-                        "0",
-                        value: $viewModel.draft.bigBlind,
-                        format: .number.precision(.fractionLength(0...2))
-                    )
-                    .keyboardType(.decimalPad)
-                    .multilineTextAlignment(.trailing)
-                    .frame(minWidth: 44, maxWidth: 64)
+                    .frame(minWidth: 64, maxWidth: 96)
                 }
 
                 if let preview = viewModel.draft.stakesPreview {
