@@ -101,6 +101,12 @@ struct SessionEditorView: View {
                 }
             }
 
+            Picker("Variant", selection: $viewModel.draft.pokerVariant) {
+                ForEach(PokerVariant.allCases, id: \.self) { variant in
+                    Text(variant.rawValue).tag(variant)
+                }
+            }
+
             TextField(
                 "Duration (min)",
                 value: $viewModel.draft.durationMinutes,

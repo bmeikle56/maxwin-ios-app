@@ -12,6 +12,19 @@ enum GameType: String, Codable, Sendable, CaseIterable {
     case tournament = "Tournament"
 }
 
+enum PokerVariant: String, Codable, Sendable, CaseIterable {
+    case nlh = "NLH"
+    case plo = "PLO"
+
+    /// Suffix used in stake strings like `2/5 NL` or `2/5 PLO`.
+    var stakesSuffix: String {
+        switch self {
+        case .nlh: return "NL"
+        case .plo: return "PLO"
+        }
+    }
+}
+
 enum PlayEnvironment: String, Codable, Sendable, CaseIterable {
     case online = "Online"
     case live = "Live"
@@ -22,12 +35,12 @@ struct PokerSession: Identifiable, Equatable, Codable, Sendable {
     let date: Date
     let venue: String
     let gameType: GameType
+    let pokerVariant: PokerVariant
     let stakes: String
     let durationMinutes: Int
     let buyIn: Double
     let cashOut: Double
     let hands: [Hand]
-    var isFavorite: Bool = false
 
     var profit: Double { cashOut - buyIn }
 
@@ -47,6 +60,54 @@ struct PokerSession: Identifiable, Equatable, Codable, Sendable {
         if mins == 0 { return "\(hours)h" }
         return "\(hours)h \(mins)m"
     }
+
+    init(
+        id: UUID,
+        date: Date,
+        venue: String,
+        gameType: GameType,
+        pokerVariant: PokerVariant = .nlh,
+        stakes: String,
+        durationMinutes: Int,
+        buyIn: Double,
+        cashOut: Double,
+        hands: [Hand]
+    ) {
+        self.id = id
+        self.date = date
+        self.venue = venue
+        self.gameType = gameType
+        self.pokerVariant = pokerVariant
+        self.stakes = stakes
+        self.durationMinutes = durationMinutes
+        self.buyIn = buyIn
+        self.cashOut = cashOut
+        self.hands = hands
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, date, venue, gameType, pokerVariant, stakes
+        case durationMinutes, buyIn, cashOut, hands
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        date = try container.decode(Date.self, forKey: .date)
+        venue = try container.decode(String.self, forKey: .venue)
+        gameType = try container.decode(GameType.self, forKey: .gameType)
+        stakes = try container.decode(String.self, forKey: .stakes)
+        durationMinutes = try container.decode(Int.self, forKey: .durationMinutes)
+        buyIn = try container.decode(Double.self, forKey: .buyIn)
+        cashOut = try container.decode(Double.self, forKey: .cashOut)
+        hands = try container.decode([Hand].self, forKey: .hands)
+
+        if let variant = try container.decodeIfPresent(PokerVariant.self, forKey: .pokerVariant) {
+            pokerVariant = variant
+        } else {
+            pokerVariant = StakesParsing.pokerVariant(from: stakes)
+        }
+    }
 }
 
 enum StakesParsing {
@@ -64,8 +125,11 @@ enum StakesParsing {
             }
         }
 
-        if let nl = trimmed.range(of: #"(\d+(?:\.\d+)?)\s*NL\b"#, options: [.regularExpression, .caseInsensitive]) {
-            let match = String(trimmed[nl])
+        if let coded = trimmed.range(
+            of: #"(\d+(?:\.\d+)?)\s*(NL|PLO)\b"#,
+            options: [.regularExpression, .caseInsensitive]
+        ) {
+            let match = String(trimmed[coded])
             let digits = match.prefix { $0.isNumber || $0 == "." }
             if let value = Double(digits), value > 0 {
                 let big = value / 100
@@ -76,14 +140,23 @@ enum StakesParsing {
         return nil
     }
 
-    /// Extracts the big blind from common stake strings like `2/5 NL` or `25NL`.
+    /// Extracts the big blind from common stake strings like `2/5 NL`, `2/5 PLO`, or `25NL`.
     static func bigBlind(from stakes: String) -> Double? {
         smallAndBigBlind(from: stakes)?.big
     }
 
-    /// Formats blinds as `1/2` or `0.5/1`.
-    static func format(smallBlind: Double, bigBlind: Double) -> String {
-        "\(formatBlind(smallBlind))/\(formatBlind(bigBlind))"
+    /// Infers NLH vs PLO from stake text; defaults to NLH.
+    static func pokerVariant(from stakes: String) -> PokerVariant {
+        let trimmed = stakes.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.range(of: #"\bPLO\b"#, options: [.regularExpression, .caseInsensitive]) != nil {
+            return .plo
+        }
+        return .nlh
+    }
+
+    /// Formats blinds as `1/2 NL` or `0.5/1 PLO`.
+    static func format(smallBlind: Double, bigBlind: Double, variant: PokerVariant = .nlh) -> String {
+        "\(formatBlind(smallBlind))/\(formatBlind(bigBlind)) \(variant.stakesSuffix)"
     }
 
     private static func formatBlind(_ value: Double) -> String {

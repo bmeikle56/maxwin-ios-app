@@ -51,19 +51,7 @@ struct SessionDetailView: View {
         .navigationTitle(session?.venue ?? "Session")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItemGroup(placement: .topBarTrailing) {
-                if let session {
-                    Button {
-                        Task { await viewModel.toggleSessionFavorite(session) }
-                    } label: {
-                        Image(systemName: session.isFavorite ? "star.fill" : "star")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundStyle(MaxwinTheme.gold)
-                    }
-                    .disabled(viewModel.isMutating)
-                    .accessibilityLabel(session.isFavorite ? "Remove from favorites" : "Add to favorites")
-                }
-
+            ToolbarItem(placement: .topBarTrailing) {
                 Menu {
                     Button {
                         if let session {
@@ -98,10 +86,16 @@ struct SessionDetailView: View {
     private func summaryCard(_ session: PokerSession) -> some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: 8) {
                     Text(session.gameType.rawValue)
-                        .font(.system(size: 13, weight: .semibold, design: .rounded))
-                        .foregroundStyle(MaxwinTheme.gold)
+                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                        .foregroundStyle(MaxwinTheme.feltDeep)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(
+                            MaxwinTheme.gold.opacity(session.gameType == .cash ? 0.92 : 0.72),
+                            in: RoundedRectangle(cornerRadius: 5, style: .continuous)
+                        )
 
                     Text(session.stakes)
                         .font(.system(size: 17, weight: .semibold, design: .rounded))

@@ -15,6 +15,7 @@ final class LiveSessionViewModel {
     private(set) var hasStarted = false
 
     var gameType: GameType?
+    var pokerVariant: PokerVariant?
     var playEnvironment: PlayEnvironment?
 
     private var runningStartedAt: Date?
@@ -81,7 +82,7 @@ final class LiveSessionViewModel {
     }
 
     var canStart: Bool {
-        !hasStarted && gameType != nil && playEnvironment != nil
+        !hasStarted && gameType != nil && pokerVariant != nil && playEnvironment != nil
     }
 
     var canSave: Bool {
@@ -160,8 +161,8 @@ final class LiveSessionViewModel {
             return nil
         }
 
-        guard let gameType, let playEnvironment else {
-            errorMessage = "Select a game type and venue."
+        guard let gameType, let pokerVariant, let playEnvironment else {
+            errorMessage = "Select a game type, variant, and venue."
             return nil
         }
 
@@ -173,7 +174,12 @@ final class LiveSessionViewModel {
             date: .now,
             venue: playEnvironment == .online ? "Online Session" : "Live Session",
             gameType: gameType,
-            stakes: StakesParsing.format(smallBlind: smallBlind, bigBlind: bigBlind),
+            pokerVariant: pokerVariant,
+            stakes: StakesParsing.format(
+                smallBlind: smallBlind,
+                bigBlind: bigBlind,
+                variant: pokerVariant
+            ),
             durationMinutes: durationMinutes,
             buyIn: 0,
             cashOut: profit,

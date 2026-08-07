@@ -40,7 +40,6 @@ struct SessionListPage: Equatable, Sendable {
 struct SessionListQuery: Equatable, Sendable {
     var offset: Int = 0
     var limit: Int = 10
-    var favoritesOnly: Bool = false
     var searchText: String = ""
 }
 
@@ -67,10 +66,7 @@ final class MockSessionService: SessionServicing {
     func fetchSessionPage(_ query: SessionListQuery) async throws -> SessionListPage {
         try await Task.sleep(nanoseconds: networkDelayNanoseconds)
 
-        let filtered = filteredSessions(
-            favoritesOnly: query.favoritesOnly,
-            searchText: query.searchText
-        )
+        let filtered = filteredSessions(searchText: query.searchText)
         let limit = max(query.limit, 1)
         let offset = max(query.offset, 0)
         let slice = Array(filtered.dropFirst(offset).prefix(limit))
@@ -115,18 +111,16 @@ final class MockSessionService: SessionServicing {
         sessions.removeAll { $0.id == id }
     }
 
-    private func filteredSessions(favoritesOnly: Bool, searchText: String) -> [PokerSession] {
+    private func filteredSessions(searchText: String) -> [PokerSession] {
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         return sessions.filter { session in
-            if favoritesOnly && !session.isFavorite {
-                return false
-            }
             guard !query.isEmpty else { return true }
 
             let haystacks: [String] = [
                 session.venue,
                 session.stakes,
-                session.gameType.rawValue
+                session.gameType.rawValue,
+                session.pokerVariant.rawValue
             ] + session.hands.flatMap { hand in
                 [hand.holeCards, hand.position, hand.notes ?? ""]
             }
@@ -271,6 +265,37 @@ final class MockSessionService: SessionServicing {
             ),
             PokerSession(
                 id: UUID(),
+                date: date(daysAgo: 16),
+                venue: "Commerce",
+                gameType: .cash,
+                pokerVariant: .plo,
+                stakes: "5/10 PLO",
+                durationMinutes: 210,
+                buyIn: 2000,
+                cashOut: 2680,
+                hands: [
+                    Hand(
+                        id: UUID(),
+                        handNumber: 1,
+                        position: "BTN",
+                        holeCards: "A♠ A♥ K♦ Q♣",
+                        result: 420,
+                        notes: "Double-suited aces hold",
+                        detail: nil
+                    ),
+                    Hand(
+                        id: UUID(),
+                        handNumber: 2,
+                        position: "CO",
+                        holeCards: "J♥ T♥ 9♠ 8♠",
+                        result: -180,
+                        notes: nil,
+                        detail: nil
+                    )
+                ]
+            ),
+            PokerSession(
+                id: UUID(),
                 date: date(daysAgo: 20),
                 venue: "Online - Ignition",
                 gameType: .cash,
@@ -297,6 +322,28 @@ final class MockSessionService: SessionServicing {
                                 StreetAction(id: UUID(), street: "River", action: "Bet half pot, both fold", potAfter: 92)
                             ]
                         )
+                    )
+                ]
+            ),
+            PokerSession(
+                id: UUID(),
+                date: date(daysAgo: 24),
+                venue: "Online - PokerStars",
+                gameType: .cash,
+                pokerVariant: .plo,
+                stakes: "50PLO",
+                durationMinutes: 95,
+                buyIn: 200,
+                cashOut: 140,
+                hands: [
+                    Hand(
+                        id: UUID(),
+                        handNumber: 1,
+                        position: "MP",
+                        holeCards: "A♦ K♦ J♣ T♣",
+                        result: -60,
+                        notes: nil,
+                        detail: nil
                     )
                 ]
             ),
@@ -411,21 +458,22 @@ final class MockSessionService: SessionServicing {
 
         // Extra lightweight sessions so list pagination is easy to exercise in mocks.
         let venues = ["Bellagio", "ARIA", "Commerce", "The Bike", "Hustler", "Venetian", "Local home game", "Online - Ignition"]
-        let stakes = ["1/2 NL", "1/3 NL", "2/5 NL", "5/10 NL", "25NL", "50NL"]
+        let stakes = ["1/2 NL", "1/3 NL", "2/5 NL", "5/10 NL", "25NL", "50NL", "2/5 PLO", "5/10 PLO", "50PLO"]
         let extras: [PokerSession] = (0..<20).map { index in
             let buyIn = Double([200, 300, 500, 800][index % 4])
             let swing = Double([-180, -90, 40, 120, 260, -40][index % 6])
+            let stake = index % 5 == 0 ? "$\(100 + index * 10) buy-in" : stakes[index % stakes.count]
             return PokerSession(
                 id: UUID(),
                 date: date(daysAgo: 140 + index * 3, hour: 18 + (index % 4)),
                 venue: venues[index % venues.count],
                 gameType: index % 5 == 0 ? .tournament : .cash,
-                stakes: index % 5 == 0 ? "$\(100 + index * 10) buy-in" : stakes[index % stakes.count],
+                pokerVariant: StakesParsing.pokerVariant(from: stake),
+                stakes: stake,
                 durationMinutes: 90 + (index * 17) % 180,
                 buyIn: buyIn,
                 cashOut: buyIn + swing,
-                hands: [],
-                isFavorite: index % 7 == 0
+                hands: []
             )
         }
 

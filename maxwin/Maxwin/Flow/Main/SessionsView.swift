@@ -44,17 +44,6 @@ struct SessionsView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .feltScreenBackground()
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button {
-                        viewModel.setShowFavoritesOnly(!viewModel.showFavoritesOnly)
-                    } label: {
-                        Image(systemName: viewModel.showFavoritesOnly ? "star.fill" : "star")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundStyle(MaxwinTheme.cream)
-                    }
-                    .accessibilityLabel(viewModel.showFavoritesOnly ? "Show all sessions" : "Show favorites only")
-                }
-
                 ToolbarItemGroup(placement: .topBarTrailing) {
                     Button {
                         viewModel.beginLiveSession()
@@ -110,46 +99,28 @@ struct SessionsView: View {
 
     private var emptyState: some View {
         VStack(spacing: 12) {
-            Image(systemName: viewModel.showFavoritesOnly ? "star" : "suit.spade.fill")
+            Image(systemName: "suit.spade.fill")
                 .font(.system(size: 36, weight: .semibold))
                 .foregroundStyle(MaxwinTheme.gold)
-            Text(viewModel.showFavoritesOnly ? "No favorites yet" : "No sessions yet")
+            Text("No sessions yet")
                 .font(.system(size: 20, weight: .bold, design: .serif))
                 .foregroundStyle(MaxwinTheme.cream)
-            Text(
-                viewModel.showFavoritesOnly
-                ? "Star a session to pin it here."
-                : "Log your first cash game or tournament."
-            )
-            .font(.system(size: 14, weight: .medium, design: .rounded))
-            .foregroundStyle(MaxwinTheme.mutedCream)
-            .multilineTextAlignment(.center)
+            Text("Log your first cash game or tournament.")
+                .font(.system(size: 14, weight: .medium, design: .rounded))
+                .foregroundStyle(MaxwinTheme.mutedCream)
+                .multilineTextAlignment(.center)
 
-            if viewModel.showFavoritesOnly {
-                Button {
-                    viewModel.setShowFavoritesOnly(false)
-                } label: {
-                    Text("Show all sessions")
-                        .font(.system(size: 16, weight: .semibold, design: .rounded))
-                        .foregroundStyle(MaxwinTheme.feltDeep)
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 12)
-                        .background(MaxwinTheme.gold, in: Capsule())
-                }
-                .padding(.top, 4)
-            } else {
-                Button {
-                    viewModel.beginCreateSession()
-                } label: {
-                    Text("Add Session")
-                        .font(.system(size: 16, weight: .semibold, design: .rounded))
-                        .foregroundStyle(MaxwinTheme.feltDeep)
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 12)
-                        .background(MaxwinTheme.gold, in: Capsule())
-                }
-                .padding(.top, 4)
+            Button {
+                viewModel.beginCreateSession()
+            } label: {
+                Text("Add Session")
+                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                    .foregroundStyle(MaxwinTheme.feltDeep)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 12)
+                    .background(MaxwinTheme.gold, in: Capsule())
             }
+            .padding(.top, 4)
         }
         .padding()
     }
@@ -241,19 +212,13 @@ struct SessionsView: View {
 
     private func condensedSessionRow(_ session: PokerSession) -> some View {
         HStack(spacing: 10) {
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 6) {
-                    Text(session.venue)
-                        .font(.system(size: 14, weight: .semibold, design: .rounded))
-                        .foregroundStyle(MaxwinTheme.cream)
-                        .lineLimit(1)
+            VStack(alignment: .leading, spacing: 4) {
+                gameTypeBadge(session.gameType, compact: true)
 
-                    if session.isFavorite {
-                        Image(systemName: "star.fill")
-                            .font(.system(size: 9, weight: .semibold))
-                            .foregroundStyle(MaxwinTheme.gold)
-                    }
-                }
+                Text(session.venue)
+                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                    .foregroundStyle(MaxwinTheme.cream)
+                    .lineLimit(1)
 
                 Text("\(condensedDateFormatter.string(from: session.date)) · \(session.stakes)")
                     .font(.system(size: 11, weight: .medium, design: .rounded))
@@ -271,15 +236,15 @@ struct SessionsView: View {
     }
 
     private func sessionCard(_ session: PokerSession) -> some View {
-        // let glow = session.profit >= 0 ? MaxwinTheme.winGreen : MaxwinTheme.lossRed
-
         return HStack(alignment: .top, spacing: 12) {
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 8) {
+                gameTypeBadge(session.gameType, compact: false)
+
                 Text(session.venue)
                     .font(.system(size: 17, weight: .semibold, design: .rounded))
                     .foregroundStyle(MaxwinTheme.cream)
 
-                Text("\(session.gameType.rawValue) · \(session.stakes)")
+                Text(session.stakes)
                     .font(.system(size: 13, weight: .medium, design: .rounded))
                     .foregroundStyle(MaxwinTheme.mutedCream)
 
@@ -296,19 +261,20 @@ struct SessionsView: View {
         .background(MaxwinTheme.fieldFill, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay {
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .strokeBorder(
-                    session.isFavorite ? MaxwinTheme.gold.opacity(0.45) : MaxwinTheme.fieldStroke,
-                    lineWidth: 1
-                )
+                .strokeBorder(MaxwinTheme.fieldStroke, lineWidth: 1)
         }
-        // Glow temporarily disabled.
-        // .background {
-        //     RoundedRectangle(cornerRadius: 16, style: .continuous)
-        //         .fill(glow.opacity(0.14))
-        //         .blur(radius: 5)
-        //         .padding(1)
-        // }
-        // .shadow(color: glow.opacity(0.16), radius: 4, x: 0, y: 0)
+    }
+
+    private func gameTypeBadge(_ gameType: GameType, compact: Bool) -> some View {
+        Text(gameType.rawValue)
+            .font(.system(size: compact ? 9 : 10, weight: .bold, design: .rounded))
+            .foregroundStyle(MaxwinTheme.feltDeep)
+            .padding(.horizontal, compact ? 6 : 8)
+            .padding(.vertical, compact ? 2 : 3)
+            .background(
+                MaxwinTheme.gold.opacity(gameType == .cash ? 0.92 : 0.72),
+                in: RoundedRectangle(cornerRadius: 5, style: .continuous)
+            )
     }
 }
 

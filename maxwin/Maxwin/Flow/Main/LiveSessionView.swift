@@ -83,6 +83,16 @@ struct LiveSessionView: View {
                         .padding(.horizontal, 4)
 
                     selectionPair(
+                        options: PokerVariant.allCases.map { ($0, $0.rawValue) },
+                        selection: $viewModel.pokerVariant
+                    )
+
+                    Rectangle()
+                        .fill(MaxwinTheme.fieldStroke)
+                        .frame(height: 1)
+                        .padding(.horizontal, 4)
+
+                    selectionPair(
                         options: PlayEnvironment.allCases.map { ($0, $0.rawValue) },
                         selection: $viewModel.playEnvironment
                     )

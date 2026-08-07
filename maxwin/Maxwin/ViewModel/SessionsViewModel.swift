@@ -37,7 +37,6 @@ struct SessionWeekGroup: Identifiable, Equatable {
 final class SessionsViewModel {
     var sessions: [PokerSession] = []
     var searchText = ""
-    var showFavoritesOnly = false
     var condensedListEnabled: Bool
     var isLoading = false
     var isLoadingMore = false
@@ -113,15 +112,6 @@ final class SessionsViewModel {
         await reload(reset: false)
     }
 
-    func setShowFavoritesOnly(_ value: Bool) {
-        guard showFavoritesOnly != value else { return }
-        showFavoritesOnly = value
-        sessions = []
-        hasMore = false
-        nextOffset = 0
-        Task { await reload(reset: true) }
-    }
-
     func beginCreateSession() {
         editorViewModel = SessionEditorViewModel(
             draft: .blank(),
@@ -193,12 +183,6 @@ final class SessionsViewModel {
         }
     }
 
-    func toggleSessionFavorite(_ session: PokerSession) async {
-        var updated = session
-        updated.isFavorite.toggle()
-        await persistSession(updated)
-    }
-
     private func reload(reset: Bool) async {
         if reset {
             guard !isLoading else { return }
@@ -220,7 +204,6 @@ final class SessionsViewModel {
         let query = SessionListQuery(
             offset: offset,
             limit: pageSize,
-            favoritesOnly: showFavoritesOnly,
             searchText: searchText
         )
 
@@ -240,24 +223,6 @@ final class SessionsViewModel {
             } else {
                 errorMessage = "Couldn't load more sessions."
             }
-        }
-    }
-
-    private func persistSession(_ session: PokerSession) async {
-        isMutating = true
-        defer { isMutating = false }
-
-        do {
-            let saved = try await sessionService.updateSession(session)
-            if let index = sessions.firstIndex(where: { $0.id == saved.id }) {
-                if showFavoritesOnly && !saved.isFavorite {
-                    sessions.remove(at: index)
-                } else {
-                    sessions[index] = saved
-                }
-            }
-        } catch {
-            errorMessage = "Couldn't update favorite. Try again."
         }
     }
 
