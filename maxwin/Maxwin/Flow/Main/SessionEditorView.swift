@@ -66,33 +66,41 @@ struct SessionEditorView: View {
 
             TextField("Venue", text: $viewModel.draft.venue)
 
-            HStack(spacing: 10) {
-                Text("Stakes")
-                    .foregroundStyle(.primary)
+            if viewModel.draft.gameType == .cash {
+                HStack(spacing: 10) {
+                    Text("Blinds")
+                        .foregroundStyle(.primary)
 
-                Spacer(minLength: 8)
+                    Spacer(minLength: 8)
 
-                Text("SB")
-                    .foregroundStyle(MaxwinTheme.mutedCream)
-                TextField(
-                    "0",
-                    value: $viewModel.draft.smallBlind,
-                    format: .number.precision(.fractionLength(0...2))
-                )
-                .keyboardType(.numberPad)
-                .multilineTextAlignment(.trailing)
-                .frame(minWidth: 44, maxWidth: 64)
+                    Text("SB")
+                        .foregroundStyle(MaxwinTheme.mutedCream)
+                    TextField(
+                        "0",
+                        value: $viewModel.draft.smallBlind,
+                        format: .number.precision(.fractionLength(0...2))
+                    )
+                    .keyboardType(.decimalPad)
+                    .multilineTextAlignment(.trailing)
+                    .frame(minWidth: 44, maxWidth: 64)
 
-                Text("BB")
-                    .foregroundStyle(MaxwinTheme.mutedCream)
-                TextField(
-                    "0",
-                    value: $viewModel.draft.bigBlind,
-                    format: .number.precision(.fractionLength(0...2))
-                )
-                .keyboardType(.numberPad)
-                .multilineTextAlignment(.trailing)
-                .frame(minWidth: 44, maxWidth: 64)
+                    Text("BB")
+                        .foregroundStyle(MaxwinTheme.mutedCream)
+                    TextField(
+                        "0",
+                        value: $viewModel.draft.bigBlind,
+                        format: .number.precision(.fractionLength(0...2))
+                    )
+                    .keyboardType(.decimalPad)
+                    .multilineTextAlignment(.trailing)
+                    .frame(minWidth: 44, maxWidth: 64)
+                }
+
+                if let preview = viewModel.draft.stakesPreview {
+                    Text("Saves as \(preview)")
+                        .font(.system(size: 13, weight: .medium, design: .rounded))
+                        .foregroundStyle(MaxwinTheme.gold)
+                }
             }
 
             Picker("Game type", selection: $viewModel.draft.gameType) {
@@ -101,9 +109,17 @@ struct SessionEditorView: View {
                 }
             }
 
-            Picker("Variant", selection: $viewModel.draft.pokerVariant) {
-                ForEach(PokerVariant.allCases, id: \.self) { variant in
-                    Text(variant.rawValue).tag(variant)
+            Picker("Venue type", selection: $viewModel.draft.playEnvironment) {
+                ForEach(PlayEnvironment.allCases, id: \.self) { environment in
+                    Text(environment.rawValue).tag(environment)
+                }
+            }
+
+            if viewModel.draft.gameType == .cash {
+                Picker("Variant", selection: $viewModel.draft.pokerVariant) {
+                    ForEach(PokerVariant.allCases, id: \.self) { variant in
+                        Text(variant.rawValue).tag(variant)
+                    }
                 }
             }
 

@@ -213,14 +213,12 @@ struct SessionsView: View {
     private func condensedSessionRow(_ session: PokerSession) -> some View {
         HStack(spacing: 10) {
             VStack(alignment: .leading, spacing: 4) {
-                gameTypeBadge(session.gameType, compact: true)
+                sessionBadges(session, compact: true)
 
-                Text(session.venue)
-                    .font(.system(size: 14, weight: .semibold, design: .rounded))
-                    .foregroundStyle(MaxwinTheme.cream)
+                venueAndStakes(session, fontSize: 14, weight: .semibold)
                     .lineLimit(1)
 
-                Text("\(condensedDateFormatter.string(from: session.date)) · \(session.stakes)")
+                Text(condensedDateFormatter.string(from: session.date))
                     .font(.system(size: 11, weight: .medium, design: .rounded))
                     .foregroundStyle(MaxwinTheme.mutedCream)
                     .lineLimit(1)
@@ -238,15 +236,9 @@ struct SessionsView: View {
     private func sessionCard(_ session: PokerSession) -> some View {
         return HStack(alignment: .top, spacing: 12) {
             VStack(alignment: .leading, spacing: 8) {
-                gameTypeBadge(session.gameType, compact: false)
+                sessionBadges(session, compact: false)
 
-                Text(session.venue)
-                    .font(.system(size: 17, weight: .semibold, design: .rounded))
-                    .foregroundStyle(MaxwinTheme.cream)
-
-                Text(session.stakes)
-                    .font(.system(size: 13, weight: .medium, design: .rounded))
-                    .foregroundStyle(MaxwinTheme.mutedCream)
+                venueAndStakes(session, fontSize: 17, weight: .semibold)
 
                 Text("\(dateFormatter.string(from: session.date)) · \(session.formattedDuration)")
                     .font(.system(size: 12, weight: .regular, design: .rounded))
@@ -265,14 +257,51 @@ struct SessionsView: View {
         }
     }
 
-    private func gameTypeBadge(_ gameType: GameType, compact: Bool) -> some View {
-        Text(gameType.rawValue)
+    private func sessionBadges(_ session: PokerSession, compact: Bool) -> some View {
+        HStack(spacing: compact ? 4 : 6) {
+            sessionBadge(
+                session.playEnvironment.rawValue,
+                compact: compact,
+                usesCreamStyle: session.playEnvironment == .live
+            )
+            sessionBadge(
+                session.gameType.rawValue,
+                compact: compact,
+                usesCreamStyle: session.gameType == .cash
+            )
+        }
+    }
+
+    private func venueAndStakes(
+        _ session: PokerSession,
+        fontSize: CGFloat,
+        weight: Font.Weight
+    ) -> some View {
+        HStack(spacing: 6) {
+            Text(session.venue)
+                .foregroundStyle(MaxwinTheme.cream)
+
+            Text("·")
+                .foregroundStyle(MaxwinTheme.mutedCream)
+
+            Text(session.stakes)
+                .foregroundStyle(MaxwinTheme.cream)
+        }
+        .font(.system(size: fontSize, weight: weight, design: .rounded))
+    }
+
+    private func sessionBadge(
+        _ title: String,
+        compact: Bool,
+        usesCreamStyle: Bool
+    ) -> some View {
+        Text(title)
             .font(.system(size: compact ? 9 : 10, weight: .bold, design: .rounded))
-            .foregroundStyle(MaxwinTheme.feltDeep)
+            .foregroundStyle(usesCreamStyle ? MaxwinTheme.feltDeep : MaxwinTheme.cream)
             .padding(.horizontal, compact ? 6 : 8)
             .padding(.vertical, compact ? 2 : 3)
             .background(
-                MaxwinTheme.gold.opacity(gameType == .cash ? 0.92 : 0.72),
+                usesCreamStyle ? MaxwinTheme.cream : MaxwinTheme.badgeGreen,
                 in: RoundedRectangle(cornerRadius: 5, style: .continuous)
             )
     }

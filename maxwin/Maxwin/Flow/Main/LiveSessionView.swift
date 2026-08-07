@@ -257,63 +257,71 @@ struct LiveSessionView: View {
         cardPadding: CGFloat,
         fieldPadding: CGFloat
     ) -> some View {
-        HStack(spacing: 12) {
-            HStack(spacing: 8) {
-                Text("SB")
-                    .font(.system(size: 13, weight: .medium, design: .rounded))
-                    .foregroundStyle(MaxwinTheme.mutedCream)
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 12) {
+                HStack(spacing: 8) {
+                    Text("SB")
+                        .font(.system(size: 13, weight: .medium, design: .rounded))
+                        .foregroundStyle(MaxwinTheme.mutedCream)
 
-                TextField(
-                    "0",
-                    value: $viewModel.smallBlind,
-                    format: .number.precision(.fractionLength(0...2))
-                )
-                .keyboardType(.decimalPad)
-                .focused($focusedField, equals: .smallBlind)
-                .multilineTextAlignment(.trailing)
-                .font(.system(size: 16, weight: .semibold, design: .rounded))
-                .foregroundStyle(MaxwinTheme.cream)
-                .frame(minWidth: 36, maxWidth: 56)
+                    TextField(
+                        "0",
+                        value: $viewModel.smallBlind,
+                        format: .number.precision(.fractionLength(0...2))
+                    )
+                    .keyboardType(.decimalPad)
+                    .focused($focusedField, equals: .smallBlind)
+                    .multilineTextAlignment(.trailing)
+                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                    .foregroundStyle(MaxwinTheme.cream)
+                    .frame(minWidth: 36, maxWidth: 56)
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, fieldPadding)
+                .background(MaxwinTheme.panelFill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+
+                HStack(spacing: 8) {
+                    Text("BB")
+                        .font(.system(size: 13, weight: .medium, design: .rounded))
+                        .foregroundStyle(MaxwinTheme.mutedCream)
+
+                    TextField(
+                        "0",
+                        value: $viewModel.bigBlind,
+                        format: .number.precision(.fractionLength(0...2))
+                    )
+                    .keyboardType(.decimalPad)
+                    .focused($focusedField, equals: .bigBlind)
+                    .multilineTextAlignment(.trailing)
+                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                    .foregroundStyle(MaxwinTheme.cream)
+                    .frame(minWidth: 36, maxWidth: 56)
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, fieldPadding)
+                .background(MaxwinTheme.panelFill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+
+                Spacer(minLength: 8)
+
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text("BB won")
+                        .font(.system(size: 12, weight: .medium, design: .rounded))
+                        .foregroundStyle(MaxwinTheme.mutedCream)
+
+                    Text(viewModel.formattedBBWon)
+                        .font(.system(size: compact ? 22 : 26, weight: .bold, design: .rounded))
+                        .foregroundStyle(bbWonColor)
+                        .monospacedDigit()
+                        .contentTransition(.numericText())
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                }
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, fieldPadding)
-            .background(MaxwinTheme.panelFill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
 
-            HStack(spacing: 8) {
-                Text("BB")
-                    .font(.system(size: 13, weight: .medium, design: .rounded))
-                    .foregroundStyle(MaxwinTheme.mutedCream)
-
-                TextField(
-                    "0",
-                    value: $viewModel.bigBlind,
-                    format: .number.precision(.fractionLength(0...2))
-                )
-                .keyboardType(.decimalPad)
-                .focused($focusedField, equals: .bigBlind)
-                .multilineTextAlignment(.trailing)
-                .font(.system(size: 16, weight: .semibold, design: .rounded))
-                .foregroundStyle(MaxwinTheme.cream)
-                .frame(minWidth: 36, maxWidth: 56)
-            }
-            .padding(.horizontal, 10)
-            .padding(.vertical, fieldPadding)
-            .background(MaxwinTheme.panelFill, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-
-            Spacer(minLength: 8)
-
-            VStack(alignment: .trailing, spacing: 2) {
-                Text("BB won")
-                    .font(.system(size: 12, weight: .medium, design: .rounded))
-                    .foregroundStyle(MaxwinTheme.mutedCream)
-
-                Text(viewModel.formattedBBWon)
-                    .font(.system(size: compact ? 22 : 26, weight: .bold, design: .rounded))
-                    .foregroundStyle(bbWonColor)
-                    .monospacedDigit()
-                    .contentTransition(.numericText())
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
+            if let preview = viewModel.stakesPreview {
+                Text("Saves as \(preview)")
+                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                    .foregroundStyle(MaxwinTheme.gold)
             }
         }
         .padding(cardPadding)

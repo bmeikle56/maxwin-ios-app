@@ -56,13 +56,9 @@ final class TrackViewModel {
         return totalBBWon / totalHands * 100
     }
 
-    /// Live slash stakes (~2/5) run slower than online NL (25NL).
+    /// Live games run slower than online.
     private static func estimatedHandsPerHour(for session: PokerSession) -> Double {
-        let stakes = session.stakes
-        if stakes.range(of: #"\d+(?:\.\d+)?\s*/\s*\d+(?:\.\d+)?"#, options: .regularExpression) != nil {
-            return 30
-        }
-        return 60
+        session.playEnvironment == .live ? 30 : 60
     }
 
     /// Average session duration in the selected range, in minutes.

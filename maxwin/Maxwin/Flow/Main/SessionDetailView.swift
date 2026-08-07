@@ -87,19 +87,48 @@ struct SessionDetailView: View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text(session.gameType.rawValue)
-                        .font(.system(size: 10, weight: .bold, design: .rounded))
-                        .foregroundStyle(MaxwinTheme.feltDeep)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 3)
-                        .background(
-                            MaxwinTheme.gold.opacity(session.gameType == .cash ? 0.92 : 0.72),
-                            in: RoundedRectangle(cornerRadius: 5, style: .continuous)
-                        )
+                    HStack(spacing: 6) {
+                        Text(session.playEnvironment.rawValue)
+                            .font(.system(size: 10, weight: .bold, design: .rounded))
+                            .foregroundStyle(
+                                session.playEnvironment == .live
+                                ? MaxwinTheme.feltDeep
+                                : MaxwinTheme.cream
+                            )
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
+                            .background(
+                                session.playEnvironment == .live
+                                ? MaxwinTheme.cream
+                                : MaxwinTheme.badgeGreen,
+                                in: RoundedRectangle(cornerRadius: 5, style: .continuous)
+                            )
 
-                    Text(session.stakes)
-                        .font(.system(size: 17, weight: .semibold, design: .rounded))
-                        .foregroundStyle(MaxwinTheme.cream)
+                        Text(session.gameType.rawValue)
+                            .font(.system(size: 10, weight: .bold, design: .rounded))
+                            .foregroundStyle(
+                                session.gameType == .cash
+                                ? MaxwinTheme.feltDeep
+                                : MaxwinTheme.cream
+                            )
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
+                            .background(
+                                session.gameType == .cash
+                                ? MaxwinTheme.cream
+                                : MaxwinTheme.badgeGreen,
+                                in: RoundedRectangle(cornerRadius: 5, style: .continuous)
+                            )
+                    }
+
+                    HStack(spacing: 6) {
+                        Text(session.venue)
+                        Text("·")
+                            .foregroundStyle(MaxwinTheme.mutedCream)
+                        Text(session.stakes)
+                    }
+                    .font(.system(size: 17, weight: .semibold, design: .rounded))
+                    .foregroundStyle(MaxwinTheme.cream)
 
                     Text("\(dateFormatter.string(from: session.date)) · \(session.formattedDuration)")
                         .font(.system(size: 13, weight: .regular, design: .rounded))

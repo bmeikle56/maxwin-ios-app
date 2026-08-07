@@ -16,12 +16,9 @@ enum PokerVariant: String, Codable, Sendable, CaseIterable {
     case nlh = "NLH"
     case plo = "PLO"
 
-    /// Suffix used in stake strings like `2/5 NL` or `2/5 PLO`.
+    /// Suffix used in stake strings like `200NLH` or `500PLO`.
     var stakesSuffix: String {
-        switch self {
-        case .nlh: return "NL"
-        case .plo: return "PLO"
-        }
+        rawValue
     }
 }
 
@@ -35,6 +32,7 @@ struct PokerSession: Identifiable, Equatable, Codable, Sendable {
     let date: Date
     let venue: String
     let gameType: GameType
+    let playEnvironment: PlayEnvironment
     let pokerVariant: PokerVariant
     let stakes: String
     let durationMinutes: Int
@@ -44,7 +42,7 @@ struct PokerSession: Identifiable, Equatable, Codable, Sendable {
 
     var profit: Double { cashOut - buyIn }
 
-    /// Big blind parsed from common stake strings like `2/5 NL` or `25NL`.
+    /// Big blind parsed from stake strings like `200NLH` or legacy `2/5 NL`.
     var bigBlind: Double? {
         StakesParsing.bigBlind(from: stakes)
     }
@@ -66,6 +64,7 @@ struct PokerSession: Identifiable, Equatable, Codable, Sendable {
         date: Date,
         venue: String,
         gameType: GameType,
+        playEnvironment: PlayEnvironment = .live,
         pokerVariant: PokerVariant = .nlh,
         stakes: String,
         durationMinutes: Int,
@@ -77,6 +76,7 @@ struct PokerSession: Identifiable, Equatable, Codable, Sendable {
         self.date = date
         self.venue = venue
         self.gameType = gameType
+        self.playEnvironment = playEnvironment
         self.pokerVariant = pokerVariant
         self.stakes = stakes
         self.durationMinutes = durationMinutes
@@ -86,7 +86,7 @@ struct PokerSession: Identifiable, Equatable, Codable, Sendable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, date, venue, gameType, pokerVariant, stakes
+        case id, date, venue, gameType, playEnvironment, pokerVariant, stakes
         case durationMinutes, buyIn, cashOut, hands
     }
 
@@ -102,6 +102,12 @@ struct PokerSession: Identifiable, Equatable, Codable, Sendable {
         cashOut = try container.decode(Double.self, forKey: .cashOut)
         hands = try container.decode([Hand].self, forKey: .hands)
 
+        if let environment = try container.decodeIfPresent(PlayEnvironment.self, forKey: .playEnvironment) {
+            playEnvironment = environment
+        } else {
+            playEnvironment = venue.localizedCaseInsensitiveContains("online") ? .online : .live
+        }
+
         if let variant = try container.decodeIfPresent(PokerVariant.self, forKey: .pokerVariant) {
             pokerVariant = variant
         } else {
@@ -111,22 +117,15 @@ struct PokerSession: Identifiable, Equatable, Codable, Sendable {
 }
 
 enum StakesParsing {
-    /// Extracts small and big blinds from cash stake text like `2/5 NL`. Returns nil for buy-in / unknown formats.
+    /// Extracts small and big blinds from cash stake text.
+    /// Supports `200NLH` / `25NLH` / `500PLO` (100BB buy-in) and legacy `1/2 NL`.
+    /// Returns nil for tournament buy-in / unknown formats.
     static func smallAndBigBlind(from stakes: String) -> (small: Double, big: Double)? {
         let trimmed = stakes.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
 
-        if let slash = trimmed.range(of: #"(\d+(?:\.\d+)?)\s*/\s*(\d+(?:\.\d+)?)"#, options: .regularExpression) {
-            let match = String(trimmed[slash])
-            let parts = match.split(whereSeparator: { $0 == "/" || $0.isWhitespace })
-                .compactMap { Double($0) }
-            if parts.count >= 2, parts[0] > 0, parts[1] > 0 {
-                return (parts[0], parts[1])
-            }
-        }
-
         if let coded = trimmed.range(
-            of: #"(\d+(?:\.\d+)?)\s*(NL|PLO)\b"#,
+            of: #"(\d+(?:\.\d+)?)\s*(NLH|PLO|NL)\b"#,
             options: [.regularExpression, .caseInsensitive]
         ) {
             let match = String(trimmed[coded])
@@ -137,10 +136,19 @@ enum StakesParsing {
             }
         }
 
+        if let slash = trimmed.range(of: #"(\d+(?:\.\d+)?)\s*/\s*(\d+(?:\.\d+)?)"#, options: .regularExpression) {
+            let match = String(trimmed[slash])
+            let parts = match.split(whereSeparator: { $0 == "/" || $0.isWhitespace })
+                .compactMap { Double($0) }
+            if parts.count >= 2, parts[0] > 0, parts[1] > 0 {
+                return (parts[0], parts[1])
+            }
+        }
+
         return nil
     }
 
-    /// Extracts the big blind from common stake strings like `2/5 NL`, `2/5 PLO`, or `25NL`.
+    /// Extracts the big blind from cash stake strings like `200NLH` or legacy `2/5 NL`.
     static func bigBlind(from stakes: String) -> Double? {
         smallAndBigBlind(from: stakes)?.big
     }
@@ -154,12 +162,23 @@ enum StakesParsing {
         return .nlh
     }
 
-    /// Formats blinds as `1/2 NL` or `0.5/1 PLO`.
-    static func format(smallBlind: Double, bigBlind: Double, variant: PokerVariant = .nlh) -> String {
-        "\(formatBlind(smallBlind))/\(formatBlind(bigBlind)) \(variant.stakesSuffix)"
+    /// Formats cash stakes as 100BB buy-in notation, e.g. `1/2` → `200NLH`, `0.10/0.25` → `25NLH`.
+    static func formatCash(bigBlind: Double, variant: PokerVariant = .nlh) -> String {
+        "\(formatAmount(bigBlind * 100))\(variant.stakesSuffix)"
     }
 
-    private static func formatBlind(_ value: Double) -> String {
+    /// Formats tournament stakes as `$250 buy-in`.
+    static func formatTournament(buyIn: Double) -> String {
+        guard buyIn > 0 else { return "Tournament" }
+        return "$\(formatAmount(buyIn)) buy-in"
+    }
+
+    /// Legacy entry point used by call sites that still pass both blinds.
+    static func format(smallBlind: Double, bigBlind: Double, variant: PokerVariant = .nlh) -> String {
+        formatCash(bigBlind: bigBlind, variant: variant)
+    }
+
+    private static func formatAmount(_ value: Double) -> String {
         if value.rounded() == value {
             return String(Int(value))
         }

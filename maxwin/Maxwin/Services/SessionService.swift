@@ -120,6 +120,7 @@ final class MockSessionService: SessionServicing {
                 session.venue,
                 session.stakes,
                 session.gameType.rawValue,
+                session.playEnvironment.rawValue,
                 session.pokerVariant.rawValue
             ] + session.hands.flatMap { hand in
                 [hand.holeCards, hand.position, hand.notes ?? ""]
@@ -155,7 +156,7 @@ final class MockSessionService: SessionServicing {
                 date: date(daysAgo: 1),
                 venue: "Bellagio",
                 gameType: .cash,
-                stakes: "2/5 NL",
+                stakes: "500NLH",
                 durationMinutes: 240,
                 buyIn: 500,
                 cashOut: 1260,
@@ -254,7 +255,7 @@ final class MockSessionService: SessionServicing {
                 date: date(daysAgo: 12),
                 venue: "ARIA",
                 gameType: .cash,
-                stakes: "1/3 NL",
+                stakes: "300NLH",
                 durationMinutes: 195,
                 buyIn: 300,
                 cashOut: 840,
@@ -269,7 +270,7 @@ final class MockSessionService: SessionServicing {
                 venue: "Commerce",
                 gameType: .cash,
                 pokerVariant: .plo,
-                stakes: "5/10 PLO",
+                stakes: "1000PLO",
                 durationMinutes: 210,
                 buyIn: 2000,
                 cashOut: 2680,
@@ -299,7 +300,8 @@ final class MockSessionService: SessionServicing {
                 date: date(daysAgo: 20),
                 venue: "Online - Ignition",
                 gameType: .cash,
-                stakes: "25NL",
+                playEnvironment: .online,
+                stakes: "25NLH",
                 durationMinutes: 110,
                 buyIn: 100,
                 cashOut: 600,
@@ -330,6 +332,7 @@ final class MockSessionService: SessionServicing {
                 date: date(daysAgo: 24),
                 venue: "Online - PokerStars",
                 gameType: .cash,
+                playEnvironment: .online,
                 pokerVariant: .plo,
                 stakes: "50PLO",
                 durationMinutes: 95,
@@ -389,7 +392,7 @@ final class MockSessionService: SessionServicing {
                 date: date(daysAgo: 42),
                 venue: "Commerce",
                 gameType: .cash,
-                stakes: "5/10 NL",
+                stakes: "1000NLH",
                 durationMinutes: 260,
                 buyIn: 1500,
                 cashOut: 1120,
@@ -403,7 +406,7 @@ final class MockSessionService: SessionServicing {
                 date: date(daysAgo: 55),
                 venue: "The Bike",
                 gameType: .cash,
-                stakes: "2/5 NL",
+                stakes: "500NLH",
                 durationMinutes: 220,
                 buyIn: 500,
                 cashOut: 20,
@@ -417,7 +420,7 @@ final class MockSessionService: SessionServicing {
                 date: date(daysAgo: 70),
                 venue: "Hustler",
                 gameType: .cash,
-                stakes: "1/3 NL",
+                stakes: "300NLH",
                 durationMinutes: 175,
                 buyIn: 400,
                 cashOut: 0,
@@ -431,7 +434,7 @@ final class MockSessionService: SessionServicing {
                 date: date(daysAgo: 95),
                 venue: "Venetian",
                 gameType: .cash,
-                stakes: "2/5 NL",
+                stakes: "500NLH",
                 durationMinutes: 200,
                 buyIn: 500,
                 cashOut: 840,
@@ -445,7 +448,8 @@ final class MockSessionService: SessionServicing {
                 date: date(daysAgo: 130),
                 venue: "Online - PokerStars",
                 gameType: .cash,
-                stakes: "50NL",
+                playEnvironment: .online,
+                stakes: "50NLH",
                 durationMinutes: 140,
                 buyIn: 150,
                 cashOut: 370,
@@ -458,16 +462,18 @@ final class MockSessionService: SessionServicing {
 
         // Extra lightweight sessions so list pagination is easy to exercise in mocks.
         let venues = ["Bellagio", "ARIA", "Commerce", "The Bike", "Hustler", "Venetian", "Local home game", "Online - Ignition"]
-        let stakes = ["1/2 NL", "1/3 NL", "2/5 NL", "5/10 NL", "25NL", "50NL", "2/5 PLO", "5/10 PLO", "50PLO"]
+        let stakes = ["200NLH", "300NLH", "500NLH", "1000NLH", "25NLH", "50NLH", "500PLO", "1000PLO", "50PLO"]
         let extras: [PokerSession] = (0..<20).map { index in
             let buyIn = Double([200, 300, 500, 800][index % 4])
             let swing = Double([-180, -90, 40, 120, 260, -40][index % 6])
             let stake = index % 5 == 0 ? "$\(100 + index * 10) buy-in" : stakes[index % stakes.count]
+            let venue = venues[index % venues.count]
             return PokerSession(
                 id: UUID(),
                 date: date(daysAgo: 140 + index * 3, hour: 18 + (index % 4)),
-                venue: venues[index % venues.count],
+                venue: venue,
                 gameType: index % 5 == 0 ? .tournament : .cash,
+                playEnvironment: venue.localizedCaseInsensitiveContains("online") ? .online : .live,
                 pokerVariant: StakesParsing.pokerVariant(from: stake),
                 stakes: stake,
                 durationMinutes: 90 + (index * 17) % 180,

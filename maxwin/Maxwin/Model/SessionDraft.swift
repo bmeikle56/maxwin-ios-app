@@ -12,6 +12,7 @@ struct SessionDraft: Equatable {
     var date: Date
     var venue: String
     var gameType: GameType
+    var playEnvironment: PlayEnvironment
     var pokerVariant: PokerVariant
     var smallBlind: Double?
     var bigBlind: Double?
@@ -28,6 +29,7 @@ struct SessionDraft: Equatable {
             date: date,
             venue: "",
             gameType: .cash,
+            playEnvironment: .live,
             pokerVariant: .nlh,
             smallBlind: nil,
             bigBlind: nil,
@@ -43,6 +45,7 @@ struct SessionDraft: Equatable {
         date = session.date
         venue = session.venue
         gameType = session.gameType
+        playEnvironment = session.playEnvironment
         pokerVariant = session.pokerVariant
         let blinds = StakesParsing.smallAndBigBlind(from: session.stakes)
         smallBlind = blinds?.small
@@ -58,6 +61,7 @@ struct SessionDraft: Equatable {
         date: Date,
         venue: String,
         gameType: GameType,
+        playEnvironment: PlayEnvironment = .live,
         pokerVariant: PokerVariant = .nlh,
         smallBlind: Double?,
         bigBlind: Double?,
@@ -70,6 +74,7 @@ struct SessionDraft: Equatable {
         self.date = date
         self.venue = venue
         self.gameType = gameType
+        self.playEnvironment = playEnvironment
         self.pokerVariant = pokerVariant
         self.smallBlind = smallBlind
         self.bigBlind = bigBlind
@@ -80,17 +85,22 @@ struct SessionDraft: Equatable {
     }
 
     func makeSession(buyIn: Double, cashOut: Double, smallBlind: Double, bigBlind: Double) -> PokerSession {
-        PokerSession(
+        let stakes: String
+        switch gameType {
+        case .cash:
+            stakes = StakesParsing.formatCash(bigBlind: bigBlind, variant: pokerVariant)
+        case .tournament:
+            stakes = StakesParsing.formatTournament(buyIn: buyIn)
+        }
+
+        return PokerSession(
             id: id ?? UUID(),
             date: date,
             venue: venue.trimmingCharacters(in: .whitespacesAndNewlines),
             gameType: gameType,
+            playEnvironment: playEnvironment,
             pokerVariant: pokerVariant,
-            stakes: StakesParsing.format(
-                smallBlind: smallBlind,
-                bigBlind: bigBlind,
-                variant: pokerVariant
-            ),
+            stakes: stakes,
             durationMinutes: max(durationMinutes, 0),
             buyIn: buyIn,
             cashOut: cashOut,
@@ -98,6 +108,18 @@ struct SessionDraft: Equatable {
                 draft.makeHand(fallbackNumber: index + 1)
             }
         )
+    }
+
+    /// Preview label for the stakes string that will be saved.
+    var stakesPreview: String? {
+        switch gameType {
+        case .cash:
+            guard let bigBlind, bigBlind > 0 else { return nil }
+            return StakesParsing.formatCash(bigBlind: bigBlind, variant: pokerVariant)
+        case .tournament:
+            guard let buyIn, buyIn > 0 else { return nil }
+            return StakesParsing.formatTournament(buyIn: buyIn)
+        }
     }
 }
 

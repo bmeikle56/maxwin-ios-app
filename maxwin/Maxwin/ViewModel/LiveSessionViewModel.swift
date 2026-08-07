@@ -92,6 +92,14 @@ final class LiveSessionViewModel {
         return true
     }
 
+    /// Cash stakes label derived from the entered big blind (100BB notation).
+    var stakesPreview: String? {
+        guard gameType == .cash,
+              let bigBlind, bigBlind > 0,
+              let pokerVariant else { return nil }
+        return StakesParsing.formatCash(bigBlind: bigBlind, variant: pokerVariant)
+    }
+
     /// Leaves the setup screen and begins the live timer.
     func start() {
         guard canStart else { return }
@@ -169,17 +177,22 @@ final class LiveSessionViewModel {
         let profit = bbWon * bigBlind
         let durationMinutes = max(Int((elapsed() / 60.0).rounded()), handsPlayed > 0 ? 1 : 0)
 
+        let stakes: String
+        switch gameType {
+        case .cash:
+            stakes = StakesParsing.formatCash(bigBlind: bigBlind, variant: pokerVariant)
+        case .tournament:
+            stakes = StakesParsing.formatTournament(buyIn: 0)
+        }
+
         return PokerSession(
             id: UUID(),
             date: .now,
             venue: playEnvironment == .online ? "Online Session" : "Live Session",
             gameType: gameType,
+            playEnvironment: playEnvironment,
             pokerVariant: pokerVariant,
-            stakes: StakesParsing.format(
-                smallBlind: smallBlind,
-                bigBlind: bigBlind,
-                variant: pokerVariant
-            ),
+            stakes: stakes,
             durationMinutes: durationMinutes,
             buyIn: 0,
             cashOut: profit,
