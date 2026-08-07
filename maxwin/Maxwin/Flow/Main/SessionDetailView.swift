@@ -91,14 +91,14 @@ struct SessionDetailView: View {
                         Text(session.playEnvironment.rawValue)
                             .font(.system(size: 10, weight: .bold, design: .rounded))
                             .foregroundStyle(
-                                session.playEnvironment == .live
+                                session.playEnvironment == .online
                                 ? MaxwinTheme.feltDeep
                                 : MaxwinTheme.cream
                             )
                             .padding(.horizontal, 8)
                             .padding(.vertical, 3)
                             .background(
-                                session.playEnvironment == .live
+                                session.playEnvironment == .online
                                 ? MaxwinTheme.cream
                                 : MaxwinTheme.badgeGreen,
                                 in: RoundedRectangle(cornerRadius: 5, style: .continuous)
@@ -107,14 +107,30 @@ struct SessionDetailView: View {
                         Text(session.gameType.rawValue)
                             .font(.system(size: 10, weight: .bold, design: .rounded))
                             .foregroundStyle(
-                                session.gameType == .cash
+                                session.gameType == .tournament
                                 ? MaxwinTheme.feltDeep
                                 : MaxwinTheme.cream
                             )
                             .padding(.horizontal, 8)
                             .padding(.vertical, 3)
                             .background(
-                                session.gameType == .cash
+                                session.gameType == .tournament
+                                ? MaxwinTheme.cream
+                                : MaxwinTheme.badgeGreen,
+                                in: RoundedRectangle(cornerRadius: 5, style: .continuous)
+                            )
+
+                        Text(session.pokerVariant.rawValue)
+                            .font(.system(size: 10, weight: .bold, design: .rounded))
+                            .foregroundStyle(
+                                session.pokerVariant == .plo
+                                ? MaxwinTheme.feltDeep
+                                : MaxwinTheme.cream
+                            )
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
+                            .background(
+                                session.pokerVariant == .plo
                                 ? MaxwinTheme.cream
                                 : MaxwinTheme.badgeGreen,
                                 in: RoundedRectangle(cornerRadius: 5, style: .continuous)

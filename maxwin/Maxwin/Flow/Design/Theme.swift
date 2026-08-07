@@ -24,6 +24,6 @@ enum MaxwinTheme {
     static let divider = Color(red: 0.10, green: 0.22, blue: 0.14)
     static let winGreen = Color(red: 0.35, green: 0.78, blue: 0.48)
     static let lossRed = Color(red: 0.92, green: 0.38, blue: 0.36)
-    /// Dark green used for Online / Tournament session badges.
-    static let badgeGreen = Color(red: 0.10, green: 0.28, blue: 0.17)
+    /// Wallpaper felt green for Online / Tournament / PLO badges (cream text on top).
+    static let badgeGreen = felt
 }

@@ -32,11 +32,42 @@ struct SessionWeekGroup: Identifiable, Equatable {
     }
 }
 
+enum SessionFilterChip: String, CaseIterable, Identifiable, Hashable {
+    case cash
+    case tournament
+    case live
+    case online
+    case nlh
+    case plo
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .cash: return "Cash"
+        case .tournament: return "Tournament"
+        case .live: return "Live"
+        case .online: return "Online"
+        case .nlh: return "NLH"
+        case .plo: return "PLO"
+        }
+    }
+
+    /// Cream chips for Online / Tournament / PLO; felt green for Live / Cash / NLH.
+    var usesCreamStyle: Bool {
+        switch self {
+        case .online, .tournament, .plo: return true
+        case .live, .cash, .nlh: return false
+        }
+    }
+}
+
 @Observable
 @MainActor
 final class SessionsViewModel {
     var sessions: [PokerSession] = []
     var searchText = ""
+    var activeFilters: Set<SessionFilterChip> = []
     var condensedListEnabled: Bool
     var isLoading = false
     var isLoadingMore = false
@@ -48,7 +79,8 @@ final class SessionsViewModel {
 
     private(set) var hasMore = false
     private var nextOffset = 0
-    private let pageSize = 10
+    /// Small page so the first load roughly fills one screen; more load on scroll.
+    private let pageSize = 5
 
     private let sessionService: SessionServicing
     private let trackDataService: TrackDataServicing
@@ -62,6 +94,10 @@ final class SessionsViewModel {
         self.sessionService = sessionService
         self.trackDataService = trackDataService
         self.condensedListEnabled = condensedListEnabled
+    }
+
+    var hasActiveFilters: Bool {
+        !activeFilters.isEmpty
     }
 
     var sessionsByWeek: [SessionWeekGroup] {
@@ -108,8 +144,31 @@ final class SessionsViewModel {
 
     func loadMoreIfNeeded(currentSessionID: UUID) async {
         guard hasMore, !isLoading, !isLoadingMore else { return }
-        guard sessions.last?.id == currentSessionID else { return }
+        guard let index = sessions.firstIndex(where: { $0.id == currentSessionID }) else { return }
+        // Prefetch when one of the last two visible rows appears.
+        guard index >= sessions.count - 2 else { return }
         await reload(reset: false)
+    }
+
+    func toggleFilter(_ chip: SessionFilterChip) {
+        if activeFilters.contains(chip) {
+            activeFilters.remove(chip)
+        } else {
+            activeFilters.insert(chip)
+        }
+        sessions = []
+        hasMore = false
+        nextOffset = 0
+        Task { await reload(reset: true) }
+    }
+
+    func clearFilters() {
+        guard !activeFilters.isEmpty else { return }
+        activeFilters = []
+        sessions = []
+        hasMore = false
+        nextOffset = 0
+        Task { await reload(reset: true) }
     }
 
     func beginCreateSession() {
@@ -204,7 +263,10 @@ final class SessionsViewModel {
         let query = SessionListQuery(
             offset: offset,
             limit: pageSize,
-            searchText: searchText
+            searchText: searchText,
+            gameTypes: selectedGameTypes,
+            playEnvironments: selectedPlayEnvironments,
+            pokerVariants: selectedPokerVariants
         )
 
         do {
@@ -224,6 +286,27 @@ final class SessionsViewModel {
                 errorMessage = "Couldn't load more sessions."
             }
         }
+    }
+
+    private var selectedGameTypes: Set<GameType> {
+        var types: Set<GameType> = []
+        if activeFilters.contains(.cash) { types.insert(.cash) }
+        if activeFilters.contains(.tournament) { types.insert(.tournament) }
+        return types
+    }
+
+    private var selectedPlayEnvironments: Set<PlayEnvironment> {
+        var environments: Set<PlayEnvironment> = []
+        if activeFilters.contains(.live) { environments.insert(.live) }
+        if activeFilters.contains(.online) { environments.insert(.online) }
+        return environments
+    }
+
+    private var selectedPokerVariants: Set<PokerVariant> {
+        var variants: Set<PokerVariant> = []
+        if activeFilters.contains(.nlh) { variants.insert(.nlh) }
+        if activeFilters.contains(.plo) { variants.insert(.plo) }
+        return variants
     }
 
     private func refreshTrackCache() async {

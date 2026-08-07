@@ -25,20 +25,30 @@ struct SessionsView: View {
 
     var body: some View {
         NavigationStack {
-            Group {
-                if viewModel.isLoading && viewModel.sessions.isEmpty {
-                    ProgressView()
-                        .tint(MaxwinTheme.gold)
-                } else if let errorMessage = viewModel.errorMessage, viewModel.sessions.isEmpty {
-                    Text(errorMessage)
-                        .font(.system(size: 15, weight: .medium, design: .rounded))
-                        .foregroundStyle(MaxwinTheme.mutedCream)
-                        .multilineTextAlignment(.center)
-                        .padding()
-                } else if viewModel.sessions.isEmpty {
-                    emptyState
-                } else {
-                    sessionsList
+            VStack(spacing: 0) {
+                filterBar
+                    .padding(.horizontal, 16)
+                    .padding(.top, 4)
+                    .padding(.bottom, 8)
+
+                Group {
+                    if viewModel.isLoading && viewModel.sessions.isEmpty {
+                        ProgressView()
+                            .tint(MaxwinTheme.gold)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    } else if let errorMessage = viewModel.errorMessage, viewModel.sessions.isEmpty {
+                        Text(errorMessage)
+                            .font(.system(size: 15, weight: .medium, design: .rounded))
+                            .foregroundStyle(MaxwinTheme.mutedCream)
+                            .multilineTextAlignment(.center)
+                            .padding()
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    } else if viewModel.sessions.isEmpty {
+                        emptyState
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    } else {
+                        sessionsList
+                    }
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -98,30 +108,108 @@ struct SessionsView: View {
         }
     }
 
+    private var filterBar: some View {
+        FlowLayout(spacing: 8, rowSpacing: 8) {
+            ForEach(SessionFilterChip.allCases) { chip in
+                filterChip(chip)
+            }
+
+            if viewModel.hasActiveFilters {
+                Button {
+                    viewModel.clearFilters()
+                } label: {
+                    Text("Clear")
+                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                        .foregroundStyle(MaxwinTheme.gold)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 7)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func filterChip(_ chip: SessionFilterChip) -> some View {
+        let isSelected = viewModel.activeFilters.contains(chip)
+
+        return Button {
+            viewModel.toggleFilter(chip)
+        } label: {
+            Text(chip.title)
+                .font(.system(size: 12, weight: .bold, design: .rounded))
+                .foregroundStyle(filterChipForeground(chip: chip, isSelected: isSelected))
+                .padding(.horizontal, 12)
+                .padding(.vertical, 7)
+                .background(
+                    filterChipBackground(chip: chip, isSelected: isSelected),
+                    in: Capsule()
+                )
+                .overlay {
+                    Capsule()
+                        .strokeBorder(
+                            isSelected
+                            ? Color.clear
+                            : MaxwinTheme.fieldStroke,
+                            lineWidth: 1
+                        )
+                }
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func filterChipForeground(chip: SessionFilterChip, isSelected: Bool) -> Color {
+        guard isSelected else { return MaxwinTheme.mutedCream }
+        return chip.usesCreamStyle ? MaxwinTheme.feltDeep : MaxwinTheme.cream
+    }
+
+    private func filterChipBackground(chip: SessionFilterChip, isSelected: Bool) -> Color {
+        guard isSelected else { return MaxwinTheme.fieldFill }
+        return chip.usesCreamStyle ? MaxwinTheme.cream : MaxwinTheme.badgeGreen
+    }
+
     private var emptyState: some View {
         VStack(spacing: 12) {
-            Image(systemName: "suit.spade.fill")
+            Image(systemName: viewModel.hasActiveFilters ? "line.3.horizontal.decrease.circle" : "suit.spade.fill")
                 .font(.system(size: 36, weight: .semibold))
                 .foregroundStyle(MaxwinTheme.gold)
-            Text("No sessions yet")
+            Text(viewModel.hasActiveFilters ? "No matching sessions" : "No sessions yet")
                 .font(.system(size: 20, weight: .bold, design: .serif))
                 .foregroundStyle(MaxwinTheme.cream)
-            Text("Log your first cash game or tournament.")
-                .font(.system(size: 14, weight: .medium, design: .rounded))
-                .foregroundStyle(MaxwinTheme.mutedCream)
-                .multilineTextAlignment(.center)
+            Text(
+                viewModel.hasActiveFilters
+                ? "Try clearing or changing filters."
+                : "Log your first cash game or tournament."
+            )
+            .font(.system(size: 14, weight: .medium, design: .rounded))
+            .foregroundStyle(MaxwinTheme.mutedCream)
+            .multilineTextAlignment(.center)
 
-            Button {
-                viewModel.beginCreateSession()
-            } label: {
-                Text("Add Session")
-                    .font(.system(size: 16, weight: .semibold, design: .rounded))
-                    .foregroundStyle(MaxwinTheme.feltDeep)
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 12)
-                    .background(MaxwinTheme.gold, in: Capsule())
+            if viewModel.hasActiveFilters {
+                Button {
+                    viewModel.clearFilters()
+                } label: {
+                    Text("Clear Filters")
+                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                        .foregroundStyle(MaxwinTheme.feltDeep)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 12)
+                        .background(MaxwinTheme.gold, in: Capsule())
+                }
+                .padding(.top, 4)
+            } else {
+                Button {
+                    viewModel.beginCreateSession()
+                } label: {
+                    Text("Add Session")
+                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                        .foregroundStyle(MaxwinTheme.feltDeep)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 12)
+                        .background(MaxwinTheme.gold, in: Capsule())
+                }
+                .padding(.top, 4)
             }
-            .padding(.top, 4)
         }
         .padding()
     }
@@ -161,7 +249,7 @@ struct SessionsView: View {
                 }
             }
             .padding(.horizontal, 16)
-            .padding(.vertical, 12)
+            .padding(.bottom, 12)
         }
     }
 
@@ -263,12 +351,17 @@ struct SessionsView: View {
             sessionBadge(
                 session.playEnvironment.rawValue,
                 compact: compact,
-                usesCreamStyle: session.playEnvironment == .live
+                usesCreamStyle: session.playEnvironment == .online
             )
             sessionBadge(
                 session.gameType.rawValue,
                 compact: compact,
-                usesCreamStyle: session.gameType == .cash
+                usesCreamStyle: session.gameType == .tournament
+            )
+            sessionBadge(
+                session.pokerVariant.rawValue,
+                compact: compact,
+                usesCreamStyle: session.pokerVariant == .plo
             )
         }
     }

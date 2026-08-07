@@ -39,8 +39,11 @@ struct SessionListPage: Equatable, Sendable {
 
 struct SessionListQuery: Equatable, Sendable {
     var offset: Int = 0
-    var limit: Int = 10
+    var limit: Int = 5
     var searchText: String = ""
+    var gameTypes: Set<GameType> = []
+    var playEnvironments: Set<PlayEnvironment> = []
+    var pokerVariants: Set<PokerVariant> = []
 }
 
 protocol SessionServicing: AnyObject {
@@ -66,7 +69,12 @@ final class MockSessionService: SessionServicing {
     func fetchSessionPage(_ query: SessionListQuery) async throws -> SessionListPage {
         try await Task.sleep(nanoseconds: networkDelayNanoseconds)
 
-        let filtered = filteredSessions(searchText: query.searchText)
+        let filtered = filteredSessions(
+            searchText: query.searchText,
+            gameTypes: query.gameTypes,
+            playEnvironments: query.playEnvironments,
+            pokerVariants: query.pokerVariants
+        )
         let limit = max(query.limit, 1)
         let offset = max(query.offset, 0)
         let slice = Array(filtered.dropFirst(offset).prefix(limit))
@@ -111,9 +119,24 @@ final class MockSessionService: SessionServicing {
         sessions.removeAll { $0.id == id }
     }
 
-    private func filteredSessions(searchText: String) -> [PokerSession] {
+    private func filteredSessions(
+        searchText: String,
+        gameTypes: Set<GameType>,
+        playEnvironments: Set<PlayEnvironment>,
+        pokerVariants: Set<PokerVariant>
+    ) -> [PokerSession] {
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         return sessions.filter { session in
+            if !gameTypes.isEmpty, !gameTypes.contains(session.gameType) {
+                return false
+            }
+            if !playEnvironments.isEmpty, !playEnvironments.contains(session.playEnvironment) {
+                return false
+            }
+            if !pokerVariants.isEmpty, !pokerVariants.contains(session.pokerVariant) {
+                return false
+            }
+
             guard !query.isEmpty else { return true }
 
             let haystacks: [String] = [
